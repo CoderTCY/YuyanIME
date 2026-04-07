@@ -68,9 +68,6 @@
     <string name="version">版本</string>
     <string name="build_git_hash">构建哈希</string>
     <string name="build_time">构建时间</string>
-    <string name="build_type">SDK类型</string>
-    <string name="build_type_offline">离线版</string>
-    <string name="build_type_online">联网版</string>
     <string name="clipboard">剪贴板</string>
     <string name="full_display_keyboard">全面屏键盘优化</string>
     <string name="keyboard_full_display_advanced_tip">多功能键盘</string>

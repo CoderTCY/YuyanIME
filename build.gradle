@@ -71,8 +71,7 @@ android {
     }
     sourceSets {
         offline {
-            jniLibs.srcDirs = ['libs', "src/offline/libs"]
-            manifest.srcFile('src/offline/AndroidManifest.xml')
+            jniLibs.srcDirs = ['libs']
         }
     }
 

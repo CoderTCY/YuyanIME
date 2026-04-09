@@ -3,7 +3,6 @@ package com.yuyan.imemodule.adapter
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -23,7 +22,6 @@ import com.yuyan.imemodule.manager.InputModeSwitcherManager
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
-import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
 
 class MenuAdapter (context: Context?, val data: MutableList<SkbFunItem>) : RecyclerView.Adapter<MenuAdapter.SymbolHolder>() {
     private val inflater: LayoutInflater
@@ -72,7 +70,7 @@ class MenuAdapter (context: Context?, val data: MutableList<SkbFunItem>) : Recyc
     override fun onBindViewHolder(holder: SymbolHolder, position: Int) {
         val item = data[position]
         holder.entranceNameTextView?.text = item.funName
-        holder.entranceIconImageView?.setImageResource(item.funImgRecource)
+        holder.entranceIconImageView?.setImageResource(item.funImgResource)
         val color = if (isSettingsMenuSelect(item)) mTheme.accentKeyBackgroundColor else mTheme.keyTextColor
         holder.entranceNameTextView?.setTextColor(color)
         holder.entranceIconImageView?.getDrawable()?.setTint(color)

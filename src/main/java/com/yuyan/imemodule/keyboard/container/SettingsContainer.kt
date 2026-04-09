@@ -5,7 +5,6 @@ import android.content.Context
 import android.view.View
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.yuyan.imemodule.BuildConfig
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.adapter.MenuAdapter
 import com.yuyan.imemodule.application.CustomConstant

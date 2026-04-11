@@ -5,6 +5,7 @@ import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.utils.TimeUtils
 import com.yuyan.imemodule.libs.expression.ExpressionBuilder
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
+import kotlin.math.roundToInt
 
 object CustomEngine {
     fun parseExpressionAtEnd(input: String): String? {
@@ -18,22 +19,24 @@ object CustomEngine {
             try {
                 val evaluate = ExpressionBuilder(expression).build().evaluate()
                 val  resultFloat = evaluate.toFloat()
-                val  resultInt = evaluate.toInt()
+                val  resultInt = evaluate.roundToInt()
                 if(evaluate.compareTo(resultInt) == 0){
-                    if(!input.endsWith("=")) results.add("=".plus(resultInt))
+                    if(!input.endsWith("=")) results.add("=${resultInt}")
                     else results.add(resultInt.toString())
                 } else {
+                    val resultPercentage = "${(evaluate * 100).roundToInt()}%"
                     if(!input.endsWith("=")) {
                         results.add("=".plus(resultFloat))
-                        if(resultFloat < 1 && resultFloat > 0)results.add("=".plus((evaluate * 100).toInt().toString() + "%"))
+                        results.add("≈".plus(resultInt))
+                        if(evaluate < 10 && evaluate > 0.005) results.add("=${resultPercentage}")
                     } else {
                         results.add(resultFloat.toString())
-                        if(resultFloat < 1 && resultFloat > 0)results.add((evaluate * 100).toInt().toString() + "%")
+                        if(evaluate < 10 && evaluate > 0.005) results.add(resultPercentage)
                     }
                 }
             } catch (_:Exception){ }
-            results.addAll(arrayOf("=", "+", "-", "*", "/", "%", ".", ",", "'", "(", ")"))
         }
+        results.addAll(arrayOf("=", "+", "-", "*", "/", "%", ".", ",", "'", "(", ")"))
         return results.toTypedArray()
     }
 
@@ -54,11 +57,11 @@ object CustomEngine {
         val chinesePredictionDate = getInstance().input.chinesePredictionDate.getValue()
         if(chinesePredictionDate) {
             phrases.addAll(DataBaseKT.instance.phraseDao().query(text).map { it.content })
-            val suffixesDate = setOf("rq", "riqi", "7474", "77")
+            val suffixesDate = setOf("rq", "riqi", "PGPG", "PP")
             if (suffixesDate.any { it == text }) {
                 phrases.addAll(TimeUtils.getData())
             }
-            val suffixesTime = setOf("sj", "shijian", "75", "7445426")
+            val suffixesTime = setOf("sj", "shijian", "PJ", "PGGJGAM")
             if (suffixesTime.any { it == text }) {
                 phrases.addAll(TimeUtils.getTime())
             }

@@ -280,9 +280,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         val keyCode = sKey.code
         if (sKey.isKeyCodeKey) {
             mImeState = ImeState.STATE_INPUT
-            val metaState = if (Kernel.getCurrentRimeSchema() in listOf(
-                    CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17
-                )) KeyEvent.META_CAPS_LOCK_ON else 0
+            val metaState = if (Kernel.getCurrentRimeSchema() in listOf(CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17)) KeyEvent.META_CAPS_LOCK_ON else 0
             processKey(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
         } else if (sKey.isUserDefKey || sKey.isUniStrKey) {
             handleUserDefKey(keyCode, sKey.keyLabel)
@@ -378,9 +376,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             else -> {}
         }
 
-        if (mode == PopupMenuMode.Text && mImeState != ImeState.STATE_PREDICT) {
-            mImeState = ImeState.STATE_PREDICT
-        } else if (mode != PopupMenuMode.None && mImeState != ImeState.STATE_IDLE) {
+        if (mode == PopupMenuMode.Clear && mImeState != ImeState.STATE_IDLE) {
             resetToIdleState()
         }
     }
@@ -751,34 +747,29 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesEnd: Int) {
         selStart = newSelStart
         selEnd = newSelEnd
-        if (oldCandidatesEnd == candidatesEnd && InputModeSwitcherManager.isEnglish &&
+        if (InputModeSwitcherManager.isEnglish && oldCandidatesEnd == candidatesEnd &&
             !DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) {
             service.finishComposingText()
-            mImeState = ImeState.STATE_PREDICT
         }
         if (oldSelStart != oldSelEnd || newSelStart != newSelEnd) return
         oldCandidatesEnd = candidatesEnd
-
-        if (mImeState == ImeState.STATE_PREDICT) {
-            val textBeforeCursor = service.getTextBeforeCursor(100)
-            if (textBeforeCursor.isBlank()) return
-
-            when {
-                InputModeSwitcherManager.isNumberSkb -> {
-                    CustomEngine.parseExpressionAtEnd(textBeforeCursor)?.takeIf { it.isNotBlank() && it.length < 100 }?.let { expr ->
-                        val result = CustomEngine.expressionCalculator(textBeforeCursor, expr)
-                        if (result.isNotEmpty()) showSymbols(result)
-                    }
+        val textBeforeCursor = service.getTextBeforeCursor(100)
+        if (textBeforeCursor.isBlank()) return
+        when {
+            InputModeSwitcherManager.isNumberSkb -> {
+                CustomEngine.parseExpressionAtEnd(textBeforeCursor)?.takeIf { it.isNotBlank() && it.length < 100 }?.let { expr ->
+                    val result = CustomEngine.expressionCalculator(textBeforeCursor, expr)
+                    if (result.isNotEmpty()) showSymbols(result)
                 }
-                chinesePrediction && InputModeSwitcherManager.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
-                    DecodingInfo.isAssociate = true
-                    val queryText = if (textBeforeCursor.length > 10) textBeforeCursor.substring(textBeforeCursor.length - 10) else textBeforeCursor
-                    DecodingInfo.getAssociateWord(queryText)
-                    updateCandidate()
-                    updateCandidateBar()
-                }
-                else -> resetCandidateWindow()
             }
+            chinesePrediction && InputModeSwitcherManager.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
+                DecodingInfo.isAssociate = true
+                val queryText = if (textBeforeCursor.length > 10) textBeforeCursor.substring(textBeforeCursor.length - 10) else textBeforeCursor
+                DecodingInfo.getAssociateWord(queryText)
+                updateCandidate()
+                updateCandidateBar()
+            }
+            else -> resetCandidateWindow()
         }
     }
 }

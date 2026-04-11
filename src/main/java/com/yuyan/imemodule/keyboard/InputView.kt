@@ -405,7 +405,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             keyCode == KeyEvent.KEYCODE_DEL -> {
                 service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
                 sendKeyEvent(keyCode)
-                resetToIdleState()
             }
             keyCode in (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) -> {
                 textBeforeCursors.clear()
@@ -470,15 +469,13 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 if (DecodingInfo.isFinish || DecodingInfo.isAssociate) {
                     service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
                     sendKeyEvent(keyCode)
-                    resetToIdleState()
                 } else {
                     DecodingInfo.deleteAction()
                     updateCandidate()
                 }
                 true
             }
-            (Character.isLetterOrDigit(keyChar) && keyCode != KeyEvent.KEYCODE_0) ||
-                    keyCode == KeyEvent.KEYCODE_APOSTROPHE || keyCode == KeyEvent.KEYCODE_SEMICOLON -> {
+            (Character.isLetterOrDigit(keyChar) && keyCode != KeyEvent.KEYCODE_0) || keyCode == KeyEvent.KEYCODE_APOSTROPHE || keyCode == KeyEvent.KEYCODE_SEMICOLON -> {
                 textBeforeCursors.clear()
                 DecodingInfo.inputAction(event)
                 updateCandidate()
@@ -509,14 +506,12 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     fun chooseAndUpdate(candId: Int = mSkbCandidatesBarView.getActiveCandNo()) {
         val candidate = DecodingInfo.getCandidate(candId)
         if (candidate?.comment == "📋") {
-            mImeState = ImeState.STATE_PREDICT
             commitDecInfoText(candidate.text)
         } else {
             val choice = DecodingInfo.chooseDecodingCandidate(candId)
             if (DecodingInfo.isEngineFinish || DecodingInfo.isAssociate) {
                 KeyboardManager.instance.switchKeyboard(InputModeSwitcherManager.skbLayout)
                 (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
-                mImeState = ImeState.STATE_PREDICT
                 commitDecInfoText(choice)
             } else {
                 if (!DecodingInfo.isFinish) {
@@ -535,6 +530,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         if (!DecodingInfo.isFinish) {
             updateCandidateBar()
             (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
+            mImeState = if(DecodingInfo.isEngineFinish)ImeState.STATE_PREDICT else ImeState.STATE_INPUT
         } else {
             resetToIdleState()
         }

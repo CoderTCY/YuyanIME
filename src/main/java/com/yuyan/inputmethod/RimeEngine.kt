@@ -94,9 +94,13 @@ object RimeEngine {
     fun predictAssociationWords(text: String) {
         pinyins = emptyArray()
         if (text.isNotEmpty()) {
-            val words = CustomEngine.predictAssociationWordsChinese(text).plus(Rime.getAssociateList(text))
-            showCandidates = words.filterNotNull().map {
-                CandidateListItem("", it)
+            showCandidates = buildList {
+                val words = Rime.getAssociateList(text)
+                val firstFive = words.take(5)
+                addAll(firstFive.filterNotNull().map { CandidateListItem("", it) })
+                addAll(CustomEngine.predictAssociationWordsChinese(text).map { CandidateListItem("", it) })
+                val remaining = words.drop(5)
+                addAll(remaining.filterNotNull().map { CandidateListItem("", it) })
             }
             showComposition = ""
         }

@@ -284,14 +284,14 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             processKey(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
         } else if (sKey.isUserDefKey || sKey.isUniStrKey) {
             handleUserDefKey(keyCode, sKey.keyLabel)
-            if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+            resetToIdleState()
         }
     }
 
     private fun handleUserDefKey(keyCode: Int, label: String) {
         when {
             keyCode == InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9 -> {
-                if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                resetToIdleState()
                 return
             }
             !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty -> {
@@ -375,10 +375,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             PopupMenuMode.Enter -> commitText("\n")
             else -> {}
         }
-
-        if (mode == PopupMenuMode.Clear && mImeState != ImeState.STATE_IDLE) {
-            resetToIdleState()
-        }
+        if (mode == PopupMenuMode.Clear) resetToIdleState()
     }
 
     override fun responseHandwritingResultEvent(words: Array<CandidateListItem>) {
@@ -408,7 +405,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             keyCode == KeyEvent.KEYCODE_DEL -> {
                 service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
                 sendKeyEvent(keyCode)
-                if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                resetToIdleState()
             }
             keyCode in (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) -> {
                 textBeforeCursors.clear()
@@ -417,7 +414,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
             keyCode != 0 -> {
                 sendKeyEvent(keyCode)
-                if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                resetToIdleState()
             }
             label.isNotEmpty() -> {
                 if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
@@ -428,26 +425,25 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     private fun processFunctionKeys(event: KeyEvent): Boolean {
-        val keyCode = event.keyCode
-        return when (keyCode) {
+        return when (val keyCode = event.keyCode) {
             KeyEvent.KEYCODE_BACK -> if (service.isInputViewShown) { requestHideSelf(); true } else false
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
                 if (DecodingInfo.isFinish || (DecodingInfo.isAssociate && !mSkbCandidatesBarView.isActiveCand())) {
                     sendKeyEvent(keyCode)
-                    if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                    resetToIdleState()
                 } else {
                     chooseAndUpdate()
                 }
                 true
             }
             KeyEvent.KEYCODE_CLEAR -> {
-                if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                resetToIdleState()
                 true
             }
             KeyEvent.KEYCODE_ENTER -> {
                 if (DecodingInfo.isFinish || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
                 else commitDecInfoText(DecodingInfo.composingStrForCommit)
-                if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                resetToIdleState()
                 true
             }
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -474,7 +470,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 if (DecodingInfo.isFinish || DecodingInfo.isAssociate) {
                     service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
                     sendKeyEvent(keyCode)
-                    if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                    resetToIdleState()
                 } else {
                     DecodingInfo.deleteAction()
                     updateCandidate()
@@ -491,7 +487,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             keyCode != 0 -> {
                 if (!DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
                 sendKeyEvent(keyCode)
-                if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                resetToIdleState()
                 true
             }
             label.isNotEmpty() -> {
@@ -504,6 +500,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     fun resetToIdleState() {
+        if (mImeState == ImeState.STATE_IDLE)return
         resetCandidateWindow()
         if (hasSelectionAll) hasSelectionAll = false
         mImeState = ImeState.STATE_IDLE
@@ -527,7 +524,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                     updateCandidateBar()
                     (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
                 } else {
-                    if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+                    resetToIdleState()
                 }
             }
         }
@@ -538,7 +535,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         if (!DecodingInfo.isFinish) {
             updateCandidateBar()
             (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
-        } else if (mImeState != ImeState.STATE_IDLE) {
+        } else {
             resetToIdleState()
         }
         if (InputModeSwitcherManager.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
@@ -571,7 +568,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         override fun onClickMenu(skbMenuMode: SkbMenuMode) = onSettingsMenuClick(skbMenuMode)
 
         override fun onClickClearCandidate() {
-            if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+            resetToIdleState()
             KeyboardManager.instance.switchKeyboard()
         }
 
@@ -737,7 +734,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             initView(context)
         }
         KeyboardManager.instance.switchKeyboard()
-        if (mImeState != ImeState.STATE_IDLE) resetToIdleState()
+        resetToIdleState()
     }
 
     private var selStart = 0

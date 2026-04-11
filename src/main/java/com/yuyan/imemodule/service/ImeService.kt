@@ -76,7 +76,6 @@ class ImeService : InputMethodService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::mInputView.isInitialized) mInputView.resetToIdleState()
         removeOnChangedListener(onThemeChangeListener)
         clipboardUpdateContent.unregisterOnChangeListener(clipboardUpdateContentListener)
     }

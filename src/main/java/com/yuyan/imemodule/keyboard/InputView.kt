@@ -295,8 +295,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 return
             }
             !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty -> {
-                if (InputModeSwitcherManager.isChinese) chooseAndUpdate()
-                else if (InputModeSwitcherManager.isEnglish) commitDecInfoText(DecodingInfo.composingStrForCommit)
+                if (InputModeSwitcherManager.isChinese || InputModeSwitcherManager.isEnglish) chooseAndUpdate()
             }
         }
 
@@ -351,8 +350,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     override fun responseLongKeyEvent(result: Pair<PopupMenuMode, String>) {
         val (mode, value) = result
         if (mode != PopupMenuMode.None && !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty) {
-            if (InputModeSwitcherManager.isChinese) chooseAndUpdate()
-            else if (InputModeSwitcherManager.isEnglish) commitDecInfoText(DecodingInfo.composingStrForCommit)
+            if (InputModeSwitcherManager.isChinese || InputModeSwitcherManager.isEnglish) chooseAndUpdate()
         }
 
         when (mode) {
@@ -515,9 +513,9 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 commitDecInfoText(choice)
             } else {
                 if (!DecodingInfo.isFinish) {
-                    if (InputModeSwitcherManager.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
                     updateCandidateBar()
                     (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
+                    if (InputModeSwitcherManager.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
                 } else {
                     resetToIdleState()
                 }
@@ -664,9 +662,10 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             mAddPhrasesLayout.commitText(resultText)
         } else {
             service.commitText(StringUtils.converted2FlowerTypeface(resultText))
-            if (InputModeSwitcherManager.isEnglish && DecodingInfo.isEngineFinish &&
-                appPrefs.input.abcSpaceAuto.getValue() && StringUtils.isEnglishWord(resultText)) {
-                service.commitText(" ")
+            if (InputModeSwitcherManager.isEnglish){
+                service.finishComposingText()
+                if(appPrefs.input.abcSpaceAuto.getValue()) service.commitText(" ")
+                resetToIdleState()
             }
         }
     }
@@ -740,25 +739,29 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesEnd: Int) {
         selStart = newSelStart
         selEnd = newSelEnd
-        if (InputModeSwitcherManager.isEnglish && oldCandidatesEnd == candidatesEnd &&
-            !DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) {
-            service.finishComposingText()
+        if (InputModeSwitcherManager.isEnglish ) {
+            if (oldCandidatesEnd == candidatesEnd) {
+                service.finishComposingText()
+                resetToIdleState()
+            }
+            oldCandidatesEnd = candidatesEnd
+            return
         }
         if (oldSelStart != oldSelEnd || newSelStart != newSelEnd) return
-        oldCandidatesEnd = candidatesEnd
         val textBeforeCursor = service.getTextBeforeCursor(100)
-        if (textBeforeCursor.isBlank()) return
+        if (textBeforeCursor.isBlank()) {
+            resetToIdleState()
+            return
+        }
         when {
             InputModeSwitcherManager.isNumberSkb -> {
                 CustomEngine.parseExpressionAtEnd(textBeforeCursor)?.takeIf { it.isNotBlank() && it.length < 100 }?.let { expr ->
-                    val result = CustomEngine.expressionCalculator(textBeforeCursor, expr)
-                    if (result.isNotEmpty()) showSymbols(result)
+                    CustomEngine.expressionCalculator(textBeforeCursor, expr).takeIf { it.isNotEmpty() }?.let(::showSymbols)
                 }
             }
             chinesePrediction && InputModeSwitcherManager.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
                 DecodingInfo.isAssociate = true
-                val queryText = if (textBeforeCursor.length > 10) textBeforeCursor.substring(textBeforeCursor.length - 10) else textBeforeCursor
-                DecodingInfo.getAssociateWord(queryText)
+                DecodingInfo.getAssociateWord(textBeforeCursor.takeLast(10))
                 updateCandidate()
                 updateCandidateBar()
             }

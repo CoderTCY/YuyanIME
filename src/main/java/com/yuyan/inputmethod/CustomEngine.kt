@@ -13,9 +13,9 @@ object CustomEngine {
         return expressionEndPattern.find(input.removeSuffix("="))?.value
     }
 
-    fun expressionCalculator(input: String, expression: String):Array<String>{
+    fun expressionCalculator(input: String, expression: String?):Array<String>{
         val results = mutableListOf<String>()
-        if(!StringUtils.isNumber(expression) && !StringUtils.isLetter(expression)){
+        if(!expression.isNullOrBlank() && !StringUtils.isNumber(expression) && !StringUtils.isLetter(expression)){
             try {
                 val evaluate = ExpressionBuilder(expression).build().evaluate()
                 val  resultFloat = evaluate.toFloat()

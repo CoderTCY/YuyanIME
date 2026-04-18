@@ -284,7 +284,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             processKey(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
         } else if (sKey.isUserDefKey || sKey.isUniStrKey) {
             handleUserDefKey(keyCode, sKey.keyLabel)
-            resetToIdleState()
         }
     }
 
@@ -380,7 +379,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         DecodingInfo.isAssociate = false
         DecodingInfo.cacheCandidates(words)
         mImeState = ImeState.STATE_INPUT
-        updateCandidateBar()
     }
 
     fun processKey(event: KeyEvent): Boolean {
@@ -409,13 +407,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 val char = if (!InputModeSwitcherManager.isEnglishLower) (keyChar - 'a'.code + 'A'.code).toChar() else keyChar.toChar()
                 commitText(char.toString())
             }
-            keyCode != 0 -> {
-                sendKeyEvent(keyCode)
-                resetToIdleState()
-            }
-            label.isNotEmpty() -> {
-                if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
-            }
+            keyCode != 0 -> sendKeyEvent(keyCode)
+            label.isNotEmpty() -> if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
             else -> result = false
         }
         return result
@@ -513,7 +506,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 commitDecInfoText(choice)
             } else {
                 if (!DecodingInfo.isFinish) {
-                    updateCandidateBar()
                     (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
                     if (InputModeSwitcherManager.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
                 } else {
@@ -526,7 +518,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     private fun updateCandidate() {
         DecodingInfo.updateDecodingCandidate()
         if (!DecodingInfo.isFinish) {
-            updateCandidateBar()
             (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
             mImeState = if(DecodingInfo.isEngineFinish)ImeState.STATE_PREDICT else ImeState.STATE_INPUT
         } else {
@@ -539,7 +530,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     private fun resetCandidateWindow() {
         DecodingInfo.reset()
-        updateCandidateBar()
         (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
     }
 
@@ -603,7 +593,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         val list = symbols.map { CandidateListItem("📋", it) }.toTypedArray()
         DecodingInfo.cacheCandidates(list)
         DecodingInfo.isAssociate = true
-        updateCandidateBar()
     }
 
     fun requestHideSelf() = service.requestHideSelf(0)
@@ -755,15 +744,14 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         }
         when {
             InputModeSwitcherManager.isNumberSkb -> {
-                CustomEngine.parseExpressionAtEnd(textBeforeCursor)?.takeIf { it.isNotBlank() && it.length < 100 }?.let { expr ->
-                    CustomEngine.expressionCalculator(textBeforeCursor, expr).takeIf { it.isNotEmpty() }?.let(::showSymbols)
+                CustomEngine.parseExpressionAtEnd(textBeforeCursor).let {
+                    CustomEngine.expressionCalculator(textBeforeCursor, it).let(::showSymbols)
                 }
             }
             chinesePrediction && InputModeSwitcherManager.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
                 DecodingInfo.isAssociate = true
                 DecodingInfo.getAssociateWord(textBeforeCursor.takeLast(10))
                 updateCandidate()
-                updateCandidateBar()
             }
             else -> resetCandidateWindow()
         }

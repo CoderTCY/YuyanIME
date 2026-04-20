@@ -736,7 +736,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             oldCandidatesEnd = candidatesEnd
             return
         }
-        if (oldSelStart != oldSelEnd || newSelStart != newSelEnd) return
+        if (oldSelStart == newSelStart) return
         val textBeforeCursor = service.getTextBeforeCursor(100)
         if (textBeforeCursor.isBlank()) {
             resetToIdleState()

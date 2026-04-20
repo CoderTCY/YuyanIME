@@ -87,7 +87,7 @@ class ImeService : InputMethodService() {
         super.onConfigurationChanged(newConfig)
         CoroutineScope(Dispatchers.Main).launch {
             delay(200) //延时，解决获取屏幕尺寸不准确。
-            EnvironmentSingleton.instance.initData()
+            EnvironmentSingleton.instance.initData(baseContext)
             KeyboardLoaderUtil.instance.clearKeyboardMap()
             KeyboardManager.instance.clearKeyboard()
             if (::mInputView.isInitialized) KeyboardManager.instance.switchKeyboard()

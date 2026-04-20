@@ -1,5 +1,6 @@
 package com.yuyan.imemodule.singleton
 
+import android.content.Context
 import com.yuyan.imemodule.application.Launcher
 import com.yuyan.imemodule.data.theme.ThemeManager.prefs
 import com.yuyan.imemodule.prefs.AppPrefs
@@ -47,8 +48,8 @@ class EnvironmentSingleton private constructor() {
         initData()
     }
 
-    fun initData() {
-        val resources = Launcher.instance.context.resources
+    fun initData(context: Context = Launcher.instance.context) {
+        val resources = context.resources
         val dm = resources.displayMetrics
         mScreenWidth = dm.widthPixels
         mScreenHeight = dm.heightPixels

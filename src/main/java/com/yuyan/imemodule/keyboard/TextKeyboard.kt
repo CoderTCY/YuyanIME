@@ -26,7 +26,6 @@ import kotlin.math.max
 import kotlin.math.min
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withSave
-import com.yuyan.imemodule.entity.keyboard.KeyType
 import com.yuyan.imemodule.prefs.behavior.SkbStyleMode
 
 /**
@@ -80,7 +79,7 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
      */
     fun updateStates() {
         if (InputModeSwitcherManager.isEnglish) {
-            var softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as SoftKeyToggle??: return
+            var softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as? SoftKeyToggle? ?: return
             softKey.enableToggleState( if(mService!!.isAddPhrases)4 else InputModeSwitcherManager.mToggleStates.mStateEnter)
             softKey = mSoftKeyboard?.getKeyByCode(InputModeSwitcherManager.USER_DEF_KEYCODE_SHIFT_1) as SoftKeyToggle??: return
             var stateId = InputModeSwitcherManager.mToggleStates.charCase
@@ -90,7 +89,7 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
             softKey.enableToggleState(stateId)
             invalidateView()
         } else {
-            val softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as SoftKeyToggle??: return
+            val softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as? SoftKeyToggle? ?: return
             if (softKey.enableToggleState(if(mService!!.isAddPhrases)4 else InputModeSwitcherManager.mToggleStates.mStateEnter)) {
                 invalidateKey()
             }
@@ -205,11 +204,7 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
                 bg.setBounds(softKey.mLeft + keyMarginX, softKey.mTop + keyMarginY, softKey.mRight - keyMarginX, softKey.mBottom - keyMarginY)
                 bg.draw(canvas)
         }
-        val keyLabel = if(mService != null && InputModeSwitcherManager.isEnglish) {
-            if (InputModeSwitcherManager.isEnglishLower || (InputModeSwitcherManager.isEnglishUpperCase && !DecodingInfo.isCandidatesListEmpty)) {
-                softKey.keyLabel.lowercase()
-            } else softKey.keyLabel
-        } else softKey.keyLabel
+        val keyLabel = if(InputModeSwitcherManager.isEnglish && InputModeSwitcherManager.isEnglishLower) softKey.keyLabel.lowercase() else softKey.keyLabel
         val keyLabelSmall = softKey.getmKeyLabelSmall()
         val keyMnemonic = softKey.keyMnemonic
         val keyIcon = if(skbStyleMode == SkbStyleMode.Google && softKey.code == KeyEvent.KEYCODE_SPACE) null

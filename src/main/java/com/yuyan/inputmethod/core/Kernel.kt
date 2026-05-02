@@ -84,4 +84,8 @@ object Kernel {
         val emojiInput = AppPrefs.getInstance().input.emojiInput.getValue()
         RimeEngine.setImeOption("emoji", emojiInput)
     }
+
+    fun setCharCase(charCase: Int) {
+        RimeEngine.setCharCase(charCase)
+    }
 }

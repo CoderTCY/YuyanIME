@@ -4,6 +4,7 @@ import android.view.inputmethod.EditorInfo
 import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.keyboard.KeyboardManager
+import com.yuyan.imemodule.keyboard.container.InputBaseContainer
 import com.yuyan.inputmethod.core.Kernel
 
 /**
@@ -192,20 +193,7 @@ object InputModeSwitcherManager {
     /**
      * Mode for inputing English lower characters with soft keyboard. 标准软键盘、英文、小写模式
      */
-    private const val MODE_SKB_ENGLISH_LOWER =
-        MASK_SKB_LAYOUT_QWERTY_ABC or MASK_LANGUAGE_EN or MASK_CASE_LOWER
-
-    /**
-     * Mode for inputing English upper characters with soft keyboard. 标准软键盘、英文、大写软键盘模式
-     */
-    private const val MODE_SKB_ENGLISH_UPPER =
-        MASK_SKB_LAYOUT_QWERTY_ABC or MASK_LANGUAGE_EN or MASK_CASE_UPPER
-
-    /**
-     * Mode for inputing English upper characters with soft keyboard. 标准软键盘、英文、大写锁定软键盘模式
-     */
-    private const val MODE_SKB_ENGLISH_UPPER_LOCK =
-        MASK_SKB_LAYOUT_QWERTY_ABC or MASK_LANGUAGE_EN or MASK_CASE_UPPER_LOCK
+    private const val MODE_SKB_ENGLISH_LOWER = MASK_SKB_LAYOUT_QWERTY_ABC or MASK_LANGUAGE_EN
 
     /**
      * Unset mode. 未设置输入法模式。
@@ -276,19 +264,22 @@ object InputModeSwitcherManager {
         var newInputMode = MODE_UNSET
         if (USER_DEF_KEYCODE_SHIFT_1 == userKey) {
             if(isChinese && !isChineseMode)isChineseMode = true
-            newInputMode = if(System.currentTimeMillis() - lsatClickTime < 300){
-                MODE_SKB_ENGLISH_UPPER_LOCK
-            } else if (MODE_SKB_ENGLISH_LOWER == mInputMode) {
-                MODE_SKB_ENGLISH_UPPER
-            } else if (MODE_SKB_ENGLISH_UPPER == mInputMode || MODE_SKB_ENGLISH_UPPER_LOCK == mInputMode){
-                if(isChineseMode) getInstance().internal.inputMethodPinyinMode.getValue() else MODE_SKB_ENGLISH_LOWER
+            mToggleStates.charCase = if(System.currentTimeMillis() - lsatClickTime < 300){
+                MASK_CASE_UPPER_LOCK
+            } else if (MASK_CASE_LOWER == mToggleStates.charCase) {
+                MASK_CASE_UPPER
+            } else if (MASK_CASE_UPPER == mToggleStates.charCase || MASK_CASE_UPPER_LOCK == mToggleStates.charCase){
+                if(isChineseMode) getInstance().internal.inputMethodPinyinMode.getValue() else MASK_CASE_LOWER
             } else {
-                MODE_SKB_ENGLISH_LOWER
+                MASK_CASE_LOWER
             }
+            Kernel.setCharCase(mToggleStates.charCase)
             lsatClickTime = System.currentTimeMillis()
+            return
         } else if (USER_DEF_KEYCODE_LANG_2 == userKey) {
             newInputMode = if (isChinese) {
                 isChineseMode = false
+                mToggleStates.charCase = MASK_CASE_LOWER
                 MODE_SKB_ENGLISH_LOWER
             } else {
                 getInstance().internal.inputMethodPinyinMode.getValue()
@@ -314,10 +305,8 @@ object InputModeSwitcherManager {
             EditorInfo.TYPE_CLASS_NUMBER, EditorInfo.TYPE_CLASS_PHONE, EditorInfo.TYPE_CLASS_DATETIME -> newInputMode = MASK_SKB_LAYOUT_NUMBER
             else -> {
                 val v = editorInfo.inputType and EditorInfo.TYPE_MASK_VARIATION
-                newInputMode = if (v == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-                    || v == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
-                    || v == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                    || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
+                newInputMode = if (v == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
+                    || v == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
                         MODE_SKB_ENGLISH_LOWER
                     } else if(getInstance().keyboardSetting.keyboardLockEnglish.getValue()){
                         getInstance().internal.inputDefaultMode.getValue()
@@ -384,22 +373,7 @@ object InputModeSwitcherManager {
          */
         get() = mInputMode and MASK_LANGUAGE == MASK_LANGUAGE_EN
     val isEnglishLower: Boolean
-        /**
-         * 是否是软键盘高（小写）模式
-         */
-        get() = mInputMode and (MASK_SKB_LAYOUT or MASK_LANGUAGE or MASK_CASE) == MODE_SKB_ENGLISH_LOWER
-    val isEnglishUpperCase: Boolean
-        /**
-         * 是否是软键盘高（大写）模式
-         */
-        get() = mInputMode and (MASK_SKB_LAYOUT or MASK_LANGUAGE or MASK_CASE) == MODE_SKB_ENGLISH_UPPER
-
-
-    val isEnglishUpperLockCase: Boolean
-        /**
-         * 是否是软键盘高（锁定大写）模式
-         */
-        get() = mInputMode and (MASK_SKB_LAYOUT or MASK_LANGUAGE or MASK_CASE) == MODE_SKB_ENGLISH_UPPER_LOCK
+        get() = mToggleStates.charCase == MASK_CASE_LOWER
 
     /**
      * 保存新的输入法模式
@@ -417,6 +391,16 @@ object InputModeSwitcherManager {
         if (isChinese || isEnglish) {
             mRecentLauageInputMode = mInputMode
             getInstance().internal.inputDefaultMode.setValue(mInputMode)
+        }
+    }
+
+    /**
+     * 大写模式下输入任何按键后，Shift按键状态重置一下
+     */
+    fun resetCharCase() {
+        if(mToggleStates.charCase == MASK_CASE_UPPER){
+            mToggleStates.charCase = MASK_CASE_LOWER
+            (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
         }
     }
 

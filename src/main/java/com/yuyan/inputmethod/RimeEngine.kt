@@ -23,12 +23,17 @@ object RimeEngine {
     var showComposition: String = "" // 候选词上方展示的拼音
     var preCommitText: String = "" // 待提交的文字
     private var customPhraseSize: Int = 0 // 自定义引擎候选词长度
+    const val MASK_CASE_LOWER = 0x0000
+    const val MASK_CASE_UPPER = 0x0001
+    const val MASK_CASE_UPPER_LOCK = 0x0002
+    private var charCase = 0x0000
     fun init() {
         Rime.getInstance(false)
     }
 
     fun selectSchema(mod: String): Boolean {
         keyRecordStack.clear()
+        charCase = MASK_CASE_LOWER
         Rime.startup(Launcher.instance.context, false)
         return Rime.selectSchema(mod)
     }
@@ -68,17 +73,21 @@ object RimeEngine {
         return if (Rime.hasRight()) {
             Rime.processKey(getRimeKeycodeByName("Page_Down"), 0)
            val candidates = Rime.getRimeContext()!!.candidates
-            if (InputModeSwitcherManager.isEnglishUpperCase) {
-                for (item in candidates) {
-                    item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            when (charCase) {
+                MASK_CASE_UPPER -> {
+                    for (item in candidates) {
+                        item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                    }
                 }
-            } else if (InputModeSwitcherManager.isEnglishUpperLockCase) {
-                for (item in candidates) {
-                    item.text = item.text.uppercase()
+                MASK_CASE_UPPER_LOCK -> {
+                    for (item in candidates) {
+                        item.text = item.text.uppercase()
+                    }
                 }
-            } else {
-                for (item in candidates) {
-                    item.text = item.text.lowercase()
+                else -> {
+                    for (item in candidates) {
+                        item.text = item.text.lowercase()
+                    }
                 }
             }
             candidates
@@ -120,6 +129,7 @@ object RimeEngine {
         preCommitText = ""
         keyRecordStack.clear()
         Rime.clearComposition()
+        if(charCase == MASK_CASE_UPPER) charCase = MASK_CASE_LOWER
     }
 
     fun destroy() = Rime.destroy()
@@ -162,9 +172,9 @@ object RimeEngine {
             keyRecordStack.clear()
             preCommitText = rimeCommit.commitText
             if(Rime.getCurrentRimeSchema() == CustomConstant.SCHEMA_EN) {
-                preCommitText = if (InputModeSwitcherManager.isEnglishUpperCase) {
+                preCommitText = if (charCase == MASK_CASE_UPPER) {
                     preCommitText.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                } else if (InputModeSwitcherManager.isEnglishUpperLockCase) {
+                } else if (charCase == MASK_CASE_UPPER_LOCK) {
                     preCommitText.uppercase()
                 } else {
                     preCommitText.lowercase()
@@ -197,17 +207,19 @@ object RimeEngine {
         }
         var composition = getCurrentComposition(candidates)
         if(Rime.getCurrentRimeSchema() == CustomConstant.SCHEMA_EN) {
-            if (InputModeSwitcherManager.isEnglishUpperCase) {
-                for (item in showCandidates) item.text = item.text.lowercase()
-                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                composition = composition.lowercase()
-                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-            } else if (InputModeSwitcherManager.isEnglishUpperLockCase) {
-                for (item in showCandidates) item.text = item.text.uppercase()
-                composition = composition.uppercase()
-            } else {
-                for (item in showCandidates) item.text = item.text.lowercase()
-                composition = composition.lowercase()
+            when (charCase) {
+                MASK_CASE_UPPER -> {
+                    for (item in showCandidates) item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                    composition = composition.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                }
+                MASK_CASE_UPPER_LOCK -> {
+                    for (item in showCandidates) item.text = item.text.uppercase()
+                    composition = composition.uppercase()
+                }
+                else -> {
+                    for (item in showCandidates) item.text = item.text.lowercase()
+                    composition = composition.lowercase()
+                }
             }
         }
         val rimeSchema = Rime.getCurrentRimeSchema()
@@ -269,6 +281,10 @@ object RimeEngine {
      */
     private fun getRimeKeycodeByName(name: String) : Int {
         return Rime.getRimeKeycodeByName(name)
+    }
+
+    fun setCharCase(charCase: Int) {
+        this.charCase = charCase
     }
 
 }

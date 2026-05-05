@@ -36,7 +36,6 @@ import com.yuyan.imemodule.entity.StringQueue
 import com.yuyan.imemodule.entity.keyboard.SoftKey
 import com.yuyan.imemodule.keyboard.container.CandidatesContainer
 import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
-import com.yuyan.imemodule.keyboard.container.InputBaseContainer
 import com.yuyan.imemodule.keyboard.container.SymbolContainer
 import com.yuyan.imemodule.keyboard.container.T9TextContainer
 import com.yuyan.imemodule.manager.InputModeSwitcherManager
@@ -501,7 +500,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         } else {
             val choice = DecodingInfo.chooseDecodingCandidate(candId)
             if (DecodingInfo.isEngineFinish || DecodingInfo.isAssociate) {
-                KeyboardManager.instance.switchKeyboard(InputModeSwitcherManager.skbLayout)
+                KeyboardManager.instance.switchKeyboard()
                 (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
                 commitDecInfoText(choice)
             } else {
@@ -689,7 +688,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         InputModeSwitcherManager.requestInputWithSkb(editorInfo)
-        (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
         if (!restarting) {
             resetToIdleState()
             val clipboard = appPrefs.clipboard

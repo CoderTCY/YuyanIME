@@ -247,6 +247,7 @@ object InputModeSwitcherManager {
             }
             Kernel.setCharCase(mToggleStates.charCase)
             lsatClickTime = System.currentTimeMillis()
+            (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
             return
         } else if (USER_DEF_KEYCODE_LANG_2 == userKey) {
             newInputMode = if (isChinese) {

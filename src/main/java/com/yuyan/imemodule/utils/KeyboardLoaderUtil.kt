@@ -303,8 +303,8 @@ class KeyboardLoaderUtil private constructor() {
 
     // 键盘最后一行（各键盘统一，数字键盘稍微不同）
     private fun lastRows(skbValue: Int): MutableList<SoftKey> {
-        val enterToggleStates = listOf(ToggleState("去往", 0), ToggleState("搜索", 1), ToggleState("发送", 2),
-            ToggleState("下一个", 3), ToggleState("完成", 4))
+        val enterToggleStates = listOf(ToggleState("去往", 2), ToggleState("搜索", 3), ToggleState("发送", 4),
+            ToggleState("下一个", 5), ToggleState("完成", 6), ToggleState("上一个", 7))
         val softKeyToggle = createKeyToggle(KeyEvent.KEYCODE_ENTER)
         softKeyToggle.widthF = 0.18f
         softKeyToggle.stateId = 0

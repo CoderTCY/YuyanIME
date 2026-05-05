@@ -161,11 +161,6 @@ object InputModeSwitcherManager {
     private const val MASK_LANGUAGE_EN = 0x0020
 
     /**
-     * 第5位指明软键盘当前的状态，比如高（大写），低（小写）。
-     */
-    private const val MASK_CASE = 0x000f
-
-    /**
      * 指明软键盘状态为低（小写）。
      */
     private const val MASK_CASE_LOWER = 0x0000
@@ -209,30 +204,9 @@ object InputModeSwitcherManager {
      */
     private var mRecentLauageInputMode = MODE_UNSET
 
-    /**
-     * Used to indicate required toggling operations.
-     * 控制当前输入法模式软键盘布局要显示的按键切换状态和要显示的行ID。比如当前软键盘布局中
-     * ，有一个按键有默认状态、和两个切换状态，ToggleStates中的mKeyStates[]保存的就是当前要显示的切换状态
-     * ，如果按键的两个切换状态都没有在mKeyStates[]中
-     * ，那么按键就显示默认状态，如果两个切换状态中有一个在mKeyStates[]中，就显示那个切换状态
-     * 。注意：绝对不可能有一个按键的两个或两个以上的切换状态同时在mKeyStates
-     * []中。ToggleStates不仅控制按键的显示状态，还可以直接控制一行按键的显示
-     * 。mRowIdToEnable保存的就是可显示的行的ID（每行的ID不是唯一的 ，一个ID同时赋值给多行）。只有ID为
-     * mRowIdToEnable 和 ALWAYS_SHOW_ROW_ID 的行才会被显示出来。
-     */
 	@JvmField
 	val mToggleStates = ToggleStates()
 
-    /**
-     * 控制当前输入法模式软键盘布局要显示的按键切换状态和要显示的行ID的管理类。比如当前软键盘布局中
-     * ，有一个按键有默认状态、和两个切换状态，ToggleStates中的mKeyStates[]保存的就是当前要显示的切换状态
-     * ，如果按键的两个切换状态都没有在mKeyStates[]中
-     * ，那么按键就显示默认状态，如果两个切换状态中有一个在mKeyStates[]中，就显示那个切换状态
-     * 。注意：绝对不可能有一个按键的两个或两个以上的切换状态同时在mKeyStates
-     * []中。ToggleStates不仅控制按键的显示状态，还可以直接控制一行按键的显示
-     * 。mRowIdToEnable保存的就是可显示的行的ID（每行的ID不是唯一的 ，一个ID同时赋值给多行）。只有ID为
-     * mRowIdToEnable 和 ALWAYS_SHOW_ROW_ID 的行才会被显示出来。
-     */
     class ToggleStates {
         @JvmField
         var charCase = MASK_CASE_LOWER
@@ -240,16 +214,12 @@ object InputModeSwitcherManager {
 		var mStateEnter = 0
     }
 
+    // 语言键盘
     val skbImeLayout: Int
-        /**
-         * 更加软键盘：切换为语言键盘
-         */
         get() = mRecentLauageInputMode and MASK_SKB_LAYOUT
 
+    // 键盘
     val skbLayout: Int
-        /**
-         * 更加软键盘 LAYOUT，切换回上次键盘
-         */
         get() = mInputMode and MASK_SKB_LAYOUT
 
     // 记录SHIFT点击时间，作为双击判断
@@ -268,8 +238,10 @@ object InputModeSwitcherManager {
                 MASK_CASE_UPPER_LOCK
             } else if (MASK_CASE_LOWER == mToggleStates.charCase) {
                 MASK_CASE_UPPER
-            } else if (MASK_CASE_UPPER == mToggleStates.charCase || MASK_CASE_UPPER_LOCK == mToggleStates.charCase){
-                if(isChineseMode) getInstance().internal.inputMethodPinyinMode.getValue() else MASK_CASE_LOWER
+            } else if (isChineseMode){
+                saveInputMode(getInstance().internal.inputMethodPinyinMode.getValue())
+                KeyboardManager.instance.switchKeyboard()
+                MASK_CASE_LOWER
             } else {
                 MASK_CASE_LOWER
             }
@@ -291,7 +263,6 @@ object InputModeSwitcherManager {
         } else if (USER_DEF_KEYCODE_RETURN_6 == userKey) {
             newInputMode = if (mRecentLauageInputMode != 0) mRecentLauageInputMode else getInstance().internal.inputMethodPinyinMode.getValue()
         }
-        // 保存新的输入法模式
         saveInputMode(newInputMode)
         KeyboardManager.instance.switchKeyboard()
     }
@@ -315,25 +286,14 @@ object InputModeSwitcherManager {
                     }
             }
         }
-        // 根据EditorInfo.imeOptions添加 要显示的按键的切换状态 ，以下只添加 Enter 键的切换状态。
-        val action = editorInfo.imeOptions and (EditorInfo.IME_MASK_ACTION or EditorInfo.IME_FLAG_NO_ENTER_ACTION)
-        var enterState = 0 //EditorInfo.IME_ACTION_GO
-        when (action) {
-            EditorInfo.IME_ACTION_SEARCH -> enterState = 1
-            EditorInfo.IME_ACTION_SEND -> enterState = 2
-            EditorInfo.IME_ACTION_NEXT -> {
-                val f = editorInfo.inputType and EditorInfo.TYPE_MASK_FLAGS
-                if (f != EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE) {
-                    enterState = 3
-                }
-            }
-            EditorInfo.IME_ACTION_DONE -> enterState = 4
-        }
-        mToggleStates.mStateEnter = enterState
+        val hasNoEnterAction = (editorInfo.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0
+        val action = if(hasNoEnterAction) 0 else editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
+        mToggleStates.mStateEnter = action
         if (newInputMode != mInputMode && MODE_UNSET != newInputMode) {
             saveInputMode(newInputMode)
             KeyboardManager.instance.switchKeyboard()
         }
+        (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
     }
 
     val isNumberSkb: Boolean
@@ -373,17 +333,15 @@ object InputModeSwitcherManager {
          */
         get() = mInputMode and MASK_LANGUAGE == MASK_LANGUAGE_EN
     val isEnglishLower: Boolean
-        get() = mToggleStates.charCase == MASK_CASE_LOWER
+        get() = isEnglish && mToggleStates.charCase == MASK_CASE_LOWER
 
     /**
      * 保存新的输入法模式
      */
     fun saveInputMode(newInputMode: Int) {
         mInputMode = newInputMode // 设置新的输入法模式为当前的输入法模式
-        // 语言键：显示中文或者英文、中符、英符的键
         if (isEnglish) {
-            val charCase = mInputMode and MASK_CASE
-            mToggleStates.charCase = charCase
+            mToggleStates.charCase = MASK_CASE_LOWER
             Kernel.initImeSchema(CustomConstant.SCHEMA_EN)
         } else {
             Kernel.initImeSchema(getInstance().internal.pinyinModeRime.getValue())
@@ -411,6 +369,5 @@ object InputModeSwitcherManager {
         mInputMode = MODE_UNSET
         mRecentLauageInputMode = MODE_UNSET
     }
-
 
 }

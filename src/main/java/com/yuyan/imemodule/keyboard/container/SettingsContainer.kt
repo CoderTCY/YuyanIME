@@ -217,7 +217,7 @@ class SettingsContainer(context: Context, inputView: InputView) : BaseContainer(
                 CustomConstant.SCHEMA_ZH_T9
             }
         }
-        val inputMode = keyboardValue or InputModeSwitcherManager.MASK_LANGUAGE_CN or InputModeSwitcherManager.MASK_CASE_UPPER
+        val inputMode = keyboardValue or InputModeSwitcherManager.MASK_LANGUAGE_CN
         AppPrefs.getInstance().internal.inputMethodPinyinMode.setValue(inputMode)
         AppPrefs.getInstance().internal.pinyinModeRime.setValue(value)
         // 双拼辅助功能,需刷新键盘

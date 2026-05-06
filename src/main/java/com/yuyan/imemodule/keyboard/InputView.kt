@@ -279,7 +279,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         val keyCode = sKey.code
         if (sKey.isKeyCodeKey) {
             mImeState = ImeState.STATE_INPUT
-            val metaState = if (Kernel.getCurrentRimeSchema() in listOf(CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17, CustomConstant.SCHEMA_EN)) KeyEvent.META_CAPS_LOCK_ON else 0
+            val metaState = InputModeSwitcherManager.mToggleStates.charCase
             processKey(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
         } else if (sKey.isUserDefKey || sKey.isUniStrKey) {
             handleUserDefKey(keyCode, sKey.keyLabel)
@@ -403,8 +403,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
             keyCode in (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) -> {
                 textBeforeCursors.clear()
-                val char = if (!InputModeSwitcherManager.isEnglishLower) (keyChar - 'a'.code + 'A'.code).toChar() else keyChar.toChar()
-                commitText(char.toString())
+                commitText(label)
             }
             keyCode != 0 -> sendKeyEvent(keyCode)
             label.isNotEmpty() -> if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)

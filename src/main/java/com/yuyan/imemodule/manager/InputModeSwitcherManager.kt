@@ -1,5 +1,6 @@
 package com.yuyan.imemodule.manager
 
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
@@ -166,16 +167,6 @@ object InputModeSwitcherManager {
     private const val MASK_CASE_LOWER = 0x0000
 
     /**
-     * 指明软键盘状态为高（大写）。
-     */
-    const val MASK_CASE_UPPER = 0x0001
-
-    /**
-     * 指明软键盘状态为高（大写）锁定状态。
-     */
-    private const val MASK_CASE_UPPER_LOCK = 0x0002
-
-    /**
      * Mode for inputing Chinese with soft keyboard. 九宫格软键盘、中文模式
      */
     const val MODE_T9_CHINESE = MASK_SKB_LAYOUT_T9_PINYIN or MASK_LANGUAGE_CN
@@ -235,9 +226,9 @@ object InputModeSwitcherManager {
         if (USER_DEF_KEYCODE_SHIFT_1 == userKey) {
             if(isChinese && !isChineseMode)isChineseMode = true
             mToggleStates.charCase = if(System.currentTimeMillis() - lsatClickTime < 300){
-                MASK_CASE_UPPER_LOCK
+                KeyEvent.META_CAPS_LOCK_ON
             } else if (MASK_CASE_LOWER == mToggleStates.charCase) {
-                MASK_CASE_UPPER
+                KeyEvent.META_SHIFT_ON
             } else if (isChineseMode){
                 saveInputMode(getInstance().internal.inputMethodPinyinMode.getValue())
                 KeyboardManager.instance.switchKeyboard()
@@ -357,7 +348,7 @@ object InputModeSwitcherManager {
      * 大写模式下输入任何按键后，Shift按键状态重置一下
      */
     fun resetCharCase() {
-        if(mToggleStates.charCase == MASK_CASE_UPPER){
+        if(mToggleStates.charCase == KeyEvent.META_SHIFT_ON){
             mToggleStates.charCase = MASK_CASE_LOWER
             (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
         }

@@ -23,9 +23,7 @@ object RimeEngine {
     var showComposition: String = "" // 候选词上方展示的拼音
     var preCommitText: String = "" // 待提交的文字
     private var customPhraseSize: Int = 0 // 自定义引擎候选词长度
-    const val MASK_CASE_LOWER = 0x0000
-    const val MASK_CASE_UPPER = 0x0001
-    const val MASK_CASE_UPPER_LOCK = 0x0002
+    const val MASK_CASE_LOWER = 0
     private var charCase = 0x0000
     fun init() {
         Rime.getInstance(false)
@@ -74,12 +72,12 @@ object RimeEngine {
             Rime.processKey(getRimeKeycodeByName("Page_Down"), 0)
            val candidates = Rime.getRimeContext()!!.candidates
             when (charCase) {
-                MASK_CASE_UPPER -> {
+                KeyEvent.META_SHIFT_ON -> {
                     for (item in candidates) {
                         item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
                     }
                 }
-                MASK_CASE_UPPER_LOCK -> {
+                KeyEvent.META_CAPS_LOCK_ON -> {
                     for (item in candidates) {
                         item.text = item.text.uppercase()
                     }
@@ -129,7 +127,7 @@ object RimeEngine {
         preCommitText = ""
         keyRecordStack.clear()
         Rime.clearComposition()
-        if(charCase == MASK_CASE_UPPER) charCase = MASK_CASE_LOWER
+        if(charCase == KeyEvent.META_SHIFT_ON) charCase = MASK_CASE_LOWER
     }
 
     fun destroy() = Rime.destroy()
@@ -172,9 +170,9 @@ object RimeEngine {
             keyRecordStack.clear()
             preCommitText = rimeCommit.commitText
             if(Rime.getCurrentRimeSchema() == CustomConstant.SCHEMA_EN) {
-                preCommitText = if (charCase == MASK_CASE_UPPER) {
+                preCommitText = if (charCase == KeyEvent.META_SHIFT_ON) {
                     preCommitText.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                } else if (charCase == MASK_CASE_UPPER_LOCK) {
+                } else if (charCase == KeyEvent.META_CAPS_LOCK_ON) {
                     preCommitText.uppercase()
                 } else {
                     preCommitText.lowercase()
@@ -208,11 +206,11 @@ object RimeEngine {
         var composition = getCurrentComposition(candidates)
         if(Rime.getCurrentRimeSchema() == CustomConstant.SCHEMA_EN) {
             when (charCase) {
-                MASK_CASE_UPPER -> {
+                KeyEvent.META_SHIFT_ON -> {
                     for (item in showCandidates) item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
                     composition = composition.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
                 }
-                MASK_CASE_UPPER_LOCK -> {
+                KeyEvent.META_CAPS_LOCK_ON -> {
                     for (item in showCandidates) item.text = item.text.uppercase()
                     composition = composition.uppercase()
                 }

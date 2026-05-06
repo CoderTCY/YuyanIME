@@ -7,7 +7,6 @@ import com.yuyan.imemodule.prefs.behavior.DoublePinyinSchemaMode
 import com.yuyan.imemodule.ui.fragment.base.ManagedPreferenceFragment
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil
 import com.yuyan.imemodule.keyboard.KeyboardManager
-import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.view.preference.ManagedPreference
 import com.yuyan.inputmethod.core.Kernel
 
@@ -22,7 +21,7 @@ class InputSettingsFragment: ManagedPreferenceFragment(AppPrefs.getInstance().in
     }
     private val schemaModeListener = ManagedPreference.OnChangeListener<DoublePinyinSchemaMode> { _, doublePYSchemaMode ->
         val doublePYSchema = CustomConstant.SCHEMA_ZH_DOUBLE_FLYPY + doublePYSchemaMode
-        val inputMode = 0x1000 or InputModeSwitcherManager.MASK_LANGUAGE_CN or InputModeSwitcherManager.MASK_CASE_UPPER
+        val inputMode = 0x1000 or InputModeSwitcherManager.MASK_LANGUAGE_CN
         AppPrefs.getInstance().internal.inputMethodPinyinMode.setValue(inputMode)
         AppPrefs.getInstance().internal.pinyinModeRime.setValue(doublePYSchema)
         Kernel.initImeSchema(doublePYSchema)

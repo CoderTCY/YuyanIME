@@ -9,6 +9,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import com.yuyan.imemodule.candidate.CandidateView
 import com.yuyan.imemodule.data.emojicon.YuyanEmojiCompat
 import com.yuyan.imemodule.data.theme.Theme
 import com.yuyan.imemodule.data.theme.ThemeManager.OnThemeChangeListener
@@ -22,6 +23,7 @@ import com.yuyan.imemodule.utils.KeyboardLoaderUtil
 import com.yuyan.imemodule.keyboard.InputView
 import com.yuyan.imemodule.keyboard.KeyboardManager
 import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
+import com.yuyan.imemodule.manager.InputModeSwitcherManager
 import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.utils.isDarkMode
 import com.yuyan.imemodule.view.preference.ManagedPreference
@@ -37,18 +39,17 @@ import splitties.bitflags.hasFlag
 class ImeService : InputMethodService() {
     private var isWindowShown = false // 键盘窗口是否已显示
     private lateinit var mInputView: InputView
+    private lateinit var mCandidateView: CandidateView
     private val onThemeChangeListener = OnThemeChangeListener { _: Theme? -> if (::mInputView.isInitialized) mInputView.updateTheme() }
     private val clipboardUpdateContent = getInstance().internal.clipboardUpdateContent
     private val clipboardUpdateContentListener = ManagedPreference.OnChangeListener<String> { _, value ->
-        if(getInstance().clipboard.clipboardSuggestion.getValue()){
+        if(::mInputView.isInitialized && mInputView.isShown && getInstance().clipboard.clipboardSuggestion.getValue()){
             if(value.isNotBlank()) {
-                if (::mInputView.isInitialized && mInputView.isShown) {
-                    if(KeyboardManager.instance.currentContainer is ClipBoardContainer
-                        && (KeyboardManager.instance.currentContainer as ClipBoardContainer).getMenuMode() == SkbMenuMode.ClipBoard ){
-                        (KeyboardManager.instance.currentContainer as ClipBoardContainer).showClipBoardView(SkbMenuMode.ClipBoard)
-                    } else {
-                        mInputView.showSymbols(arrayOf(value))
-                    }
+                if(KeyboardManager.instance.currentContainer is ClipBoardContainer
+                    && (KeyboardManager.instance.currentContainer as ClipBoardContainer).getMenuMode() == SkbMenuMode.ClipBoard ){
+                    (KeyboardManager.instance.currentContainer as ClipBoardContainer).showClipBoardView(SkbMenuMode.ClipBoard)
+                } else {
+                    mInputView.showSymbols(arrayOf(value))
                 }
             }
         }
@@ -64,9 +65,15 @@ class ImeService : InputMethodService() {
         return mInputView
     }
 
-    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
-        YuyanEmojiCompat.setEditorInfo(attribute)
-        super.onStartInput(attribute, restarting)
+    override fun onCreateCandidatesView(): View {
+        mCandidateView = CandidateView(baseContext, this)
+        return mCandidateView
+    }
+
+    override fun onStartInput(editorInfo: EditorInfo?, restarting: Boolean) {
+        YuyanEmojiCompat.setEditorInfo(editorInfo)
+        if (::mCandidateView.isInitialized)mCandidateView.onStartInput(editorInfo, restarting)
+        super.onStartInput(editorInfo, restarting)
     }
 
     override fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
@@ -97,14 +104,21 @@ class ImeService : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         //  0 != event.getRepeatCount()   单次点击onKeyDown操作不处理，在onKeyUp时处理；长按时才处理onKeyDown操作。
-        return if (0 != event.repeatCount) super.onKeyDown(keyCode, event)
-        else if (isInputViewShown) true
+        return if (::mCandidateView.isInitialized && InputModeSwitcherManager.isChinese) true
+        else if (0 != event.repeatCount) super.onKeyDown(keyCode, event)
+        else if (::mInputView.isInitialized) true
         else super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        return if (isInputViewShown) mInputView.processKey(event) || super.onKeyUp(keyCode, event)
-        else super.onKeyUp(keyCode, event)
+        return if (::mInputView.isInitialized){
+            setCandidatesViewShown(false)
+            mInputView.processKey(event) || super.onKeyUp(keyCode, event)
+        } else {
+            if (!::mCandidateView.isInitialized) setCandidatesViewShown(true)
+           val result =  mCandidateView.processKey(event)
+            if(!result) super.onKeyUp(keyCode, event) else false
+        }
     }
 
     override fun setInputView(view: View) {
@@ -120,8 +134,9 @@ class ImeService : InputMethodService() {
 
 
     override fun onComputeInsets(outInsets: Insets) {
-        if (!::mInputView.isInitialized) return
-        val (x, y) = intArrayOf(0, 0).also {if(mInputView.isAddPhrases) mInputView.mAddPhrasesLayout.getLocationInWindow(it) else mInputView.mSkbRoot.getLocationInWindow(it) }
+        val (x, y) =  if (::mInputView.isInitialized) intArrayOf(0, 0).also {if(mInputView.isAddPhrases) mInputView.mAddPhrasesLayout.getLocationInWindow(it) else mInputView.mSkbRoot.getLocationInWindow(it) }
+        else if (::mCandidateView.isInitialized) intArrayOf(0, 0).also {mCandidateView.mSkbRoot.getLocationInWindow(it) }
+        else intArrayOf(0, 0)
         outInsets.apply {
             if(EnvironmentSingleton.instance.keyboardModeFloat) {
                 contentTopInsets = EnvironmentSingleton.instance.mScreenHeight
@@ -146,12 +161,14 @@ class ImeService : InputMethodService() {
         if(isWindowShown) return
         isWindowShown = true
         if (::mInputView.isInitialized) mInputView.onWindowShown()
+        else if (::mCandidateView.isInitialized) mCandidateView.onWindowShown()
         super.onWindowShown()
     }
 
     override fun onWindowHidden() {
         isWindowShown = false
         if(::mInputView.isInitialized) mInputView.onWindowHidden()
+        else if (::mCandidateView.isInitialized) mCandidateView.onWindowHidden()
         super.onWindowHidden()
     }
 

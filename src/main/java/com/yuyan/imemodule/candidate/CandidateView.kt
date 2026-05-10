@@ -8,16 +8,10 @@ import android.view.inputmethod.EditorInfo
 import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.core.text.isDigitsOnly
-import androidx.core.view.postDelayed
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.callback.CandidateViewListener
-import com.yuyan.imemodule.data.emojicon.EmojiconData.SymbolPreset
 import com.yuyan.imemodule.data.theme.ThemeManager
-import com.yuyan.imemodule.database.DataBaseKT
-import com.yuyan.imemodule.database.entry.Phrase
 import com.yuyan.imemodule.keyboard.KeyboardManager
-import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
-import com.yuyan.imemodule.keyboard.container.T9TextContainer
 import com.yuyan.imemodule.manager.InputModeSwitcherManager
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
@@ -29,15 +23,12 @@ import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.view.widget.LifecycleRelativeLayout
 
 /**
- * 输入法主界面。
+ * 物理键盘输入界面。
  * 包含拼音显示、候选词栏、键盘界面等。
  */
 @SuppressLint("ViewConstructor")
 class CandidateView(context: Context, private val service: ImeService) : LifecycleRelativeLayout(context) {
     private val appPrefs = getInstance()
-    private var chinesePrediction = true
-//    var isAddPhrases = false
-    private var mImeState = ImeState.STATE_IDLE
     private val mChoiceNotifier = ChoiceNotifier()
     var mSkbRoot: RelativeLayout
     var mSkbCandidatesBarView: FloatCandidateBar
@@ -48,7 +39,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         addView(mSkbRoot)
         mSkbCandidatesBarView = mSkbRoot.findViewById(R.id.candidates_bar)
         DecodingInfo.candidatesLiveData.observe(this) {
-            updateCandidateBar()
+            mSkbCandidatesBarView.showCandidates()
         }
         initView(context)
     }
@@ -74,7 +65,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         if (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z) return true
         if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) return true
         if (keyCode == KeyEvent.KEYCODE_SPACE) return true
-        if (keyCode == KeyEvent.KEYCODE_APOSTROPHE) return true
+        if (keyCode == KeyEvent.KEYCODE_APOSTROPHE || keyCode == KeyEvent.KEYCODE_SEMICOLON) return true   // KEYCODE_SEMICOLON在双拼中使用
         // 编辑键
         if (keyCode == KeyEvent.KEYCODE_DEL) return true
         if (keyCode == KeyEvent.KEYCODE_ENTER) return true
@@ -86,11 +77,9 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     fun processKeyUp(event: KeyEvent): Boolean {
         InputModeSwitcherManager.resetCharCase()
-        if (processFunctionKeys(event)) return true
-        return when {
-            InputModeSwitcherManager.isChinese -> processInput(event)
-            else -> false
-        }
+        return if (processFunctionKeys(event)) true
+        else if (InputModeSwitcherManager.isChinese) processInput(event)
+        else  false
     }
 
     private fun processFunctionKeys(event: KeyEvent): Boolean {
@@ -121,12 +110,10 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 true
             }
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (event.flags != KeyEvent.FLAG_SOFT_KEYBOARD && !DecodingInfo.isCandidatesListEmpty) {
+                if (!DecodingInfo.isCandidatesListEmpty) {
                     mSkbCandidatesBarView.updateActiveCandidateNo(keyCode)
-                } else if (DecodingInfo.isFinish || DecodingInfo.isAssociate) {
-                    sendKeyEvent(keyCode)
                 } else {
-                    chooseAndUpdate()
+                    sendKeyEvent(keyCode)
                 }
                 true
             }
@@ -152,30 +139,20 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 chooseAndUpdate(label.toInt() - 1)
                 true
             }
-            (Character.isLetterOrDigit(keyChar) && keyCode != KeyEvent.KEYCODE_0) || keyCode == KeyEvent.KEYCODE_APOSTROPHE || keyCode == KeyEvent.KEYCODE_SEMICOLON -> {
+            Character.isLetter(keyChar) || keyCode == KeyEvent.KEYCODE_APOSTROPHE || keyCode == KeyEvent.KEYCODE_SEMICOLON -> {
                 DecodingInfo.inputAction(event)
                 updateCandidate()
                 true
             }
-            keyCode != 0 -> {
+            else -> {
                 if (!DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
-                sendKeyEvent(keyCode)
-                resetToIdleState()
-                true
+                false
             }
-            label.isNotEmpty() -> {
-                if (!DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
-                if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
-                true
-            }
-            else -> false
         }
     }
 
     fun resetToIdleState() {
-        if (mImeState == ImeState.STATE_IDLE)return
-        resetCandidateWindow()
-        mImeState = ImeState.STATE_IDLE
+        DecodingInfo.reset()
     }
 
     fun chooseAndUpdate(candId: Int = mSkbCandidatesBarView.getActiveCandNo()) {
@@ -188,18 +165,9 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     private fun updateCandidate() {
         DecodingInfo.updateDecodingCandidate()
-        if (!DecodingInfo.isFinish) {
-            mImeState = if(DecodingInfo.isEngineFinish)ImeState.STATE_PREDICT else ImeState.STATE_INPUT
-        } else {
+        if (DecodingInfo.isFinish) {
             resetToIdleState()
         }
-    }
-
-    fun updateCandidateBar() = mSkbCandidatesBarView.showCandidates()
-
-    private fun resetCandidateWindow() {
-        DecodingInfo.reset()
-        (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
     }
 
     inner class ChoiceNotifier internal constructor() : CandidateViewListener {
@@ -209,34 +177,14 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
             chooseAndUpdate(choiceId)
         }
 
-        override fun onClickMore(level: Int) {
-            if (level == 0) {
-                onSettingsMenuClick(SkbMenuMode.CandidatesMore)
-            } else {
-                KeyboardManager.instance.switchKeyboard()
-                (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
-            }
-        }
+        override fun onClickMore(level: Int) {}
 
-        override fun onClickMenu(skbMenuMode: SkbMenuMode) = onSettingsMenuClick(skbMenuMode)
+        override fun onClickMenu(skbMenuMode: SkbMenuMode){}
 
-        override fun onClickClearCandidate() {
-            resetToIdleState()
-            KeyboardManager.instance.switchKeyboard()
-        }
+        override fun onClickClearCandidate() {}
 
-        override fun onClickClearClipBoard() {
-            DataBaseKT.instance.clipboardDao().deleteAllExceptKeep()
-            (KeyboardManager.instance.currentContainer as? ClipBoardContainer)?.showClipBoardView(SkbMenuMode.ClipBoard)
-        }
+        override fun onClickClearClipBoard() {}
     }
-
-    fun onSettingsMenuClick(skbMenuMode: SkbMenuMode, extra: Phrase? = null) {
-
-    }
-
-    enum class ImeState { STATE_IDLE, STATE_INPUT, STATE_PREDICT }
-
 
     fun requestHideSelf() = service.requestHideSelf(0)
 
@@ -247,23 +195,6 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 service.sendCombinationKeyEvents(keyCode)
             }
             else -> service.sendCombinationKeyEvents(keyCode)
-        }
-    }
-
-    private fun setComposingText(text: CharSequence) {
-        service.setComposingText(text)
-    }
-
-    private fun commitText(text: String) {
-        service.commitText(StringUtils.converted2FlowerTypeface(text))
-    }
-
-    private fun commitPairSymbol(text: String) {
-        if (appPrefs.input.symbolPairInput.getValue()) {
-            service.commitText(text + SymbolPreset[text]!!)
-            postDelayed(300) { service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_LEFT) }
-        } else {
-            service.commitText(text)
         }
     }
 
@@ -279,17 +210,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     fun onStartInput(editorInfo: EditorInfo?, restarting: Boolean) {
         if(editorInfo != null)InputModeSwitcherManager.requestInputWithSkb(editorInfo)
-        if (!restarting) {
-            resetToIdleState()
-        }
+        if (!restarting) resetToIdleState()
     }
 
-    fun onWindowShown() {
-        chinesePrediction = appPrefs.input.chinesePrediction.getValue()
-    }
-
-    fun onWindowHidden() {
-        KeyboardManager.instance.switchKeyboard()
-        resetToIdleState()
-    }
 }

@@ -162,14 +162,12 @@ class ImeService : InputMethodService() {
         if(isWindowShown) return
         isWindowShown = true
         if (::mInputView.isInitialized) mInputView.onWindowShown()
-        else if (::mCandidateView.isInitialized) mCandidateView.onWindowShown()
         super.onWindowShown()
     }
 
     override fun onWindowHidden() {
         isWindowShown = false
         if(::mInputView.isInitialized) mInputView.onWindowHidden()
-        else if (::mCandidateView.isInitialized) mCandidateView.onWindowHidden()
         super.onWindowHidden()
     }
 

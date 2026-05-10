@@ -84,7 +84,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
         } else {
             (mRVCandidates.parent as ViewGroup).removeView(mRVCandidates)
         }
-        var candidatesHeight = instance.heightForCandidates
+        val candidatesHeight = instance.heightForCandidates
         mComposingView.layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, instance.heightForcomposing)
         candidatesData.layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, candidatesHeight)
         candidatesData.addView(mRVCandidates, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, candidatesHeight, 1f))
@@ -98,7 +98,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
     fun showCandidates() {
         mComposingView.text = DecodingInfo.composingStrForDisplay
         if (DecodingInfo.isCandidatesListEmpty) {
-
+            mCandidatesDataContainer.visibility = GONE
         } else {
             if (DecodingInfo.candidateSize > DecodingInfo.activeCandidateBar) mRVCandidates.layoutManager?.scrollToPosition(DecodingInfo.activeCandidateBar)
             mCandidatesDataContainer.visibility = VISIBLE
@@ -131,7 +131,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
      * 获取激活的候选词
      */
     fun getActiveCandNo():Int {
-        return if(activeCandNo > 0) activeCandNo -1 else 0
+        return if(activeCandNo > 0) activeCandNo - 1 else 0
     }
 
     /**

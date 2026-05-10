@@ -283,7 +283,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
                 else -> InputModeSwitcherManager.mToggleStates.charCase
             }
-            processKey(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
+            processKeyUp(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
         } else if (sKey.isUserDefKey || sKey.isUniStrKey) {
             handleUserDefKey(keyCode, sKey.keyLabel)
         }
@@ -383,7 +383,21 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         mImeState = ImeState.STATE_INPUT
     }
 
-    fun processKey(event: KeyEvent): Boolean {
+    fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // 字母、数字、符号、空格
+        if (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z) return true
+        if (keyCode == KeyEvent.KEYCODE_SPACE) return true
+        if (keyCode == KeyEvent.KEYCODE_APOSTROPHE) return true
+        // 编辑键
+        if (keyCode == KeyEvent.KEYCODE_DEL) return true
+        if (keyCode == KeyEvent.KEYCODE_ENTER) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK) return true
+        // 方向键
+        if (keyCode >= KeyEvent.KEYCODE_DPAD_UP && keyCode <= KeyEvent.KEYCODE_DPAD_RIGHT) return true
+        return false
+    }
+
+    fun processKeyUp(event: KeyEvent): Boolean {
         InputModeSwitcherManager.resetCharCase()
         if (processFunctionKeys(event)) return true
         val englishCellDisable = InputModeSwitcherManager.isEnglish && !appPrefs.input.abcSearchEnglishCell.getValue()

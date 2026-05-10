@@ -6,6 +6,7 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.inputmethod.EditorInfo
 import android.widget.RelativeLayout
+import android.widget.Toast
 import androidx.core.text.isDigitsOnly
 import androidx.core.view.postDelayed
 import com.yuyan.imemodule.R
@@ -67,8 +68,23 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         mSkbCandidatesBarView.updateTheme(keyTextColor)
     }
 
+    fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if(InputModeSwitcherManager.isEnglish) return false
+        // 字母、数字、符号、空格
+        if (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z) return true
+        if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) return true
+        if (keyCode == KeyEvent.KEYCODE_SPACE) return true
+        if (keyCode == KeyEvent.KEYCODE_APOSTROPHE) return true
+        // 编辑键
+        if (keyCode == KeyEvent.KEYCODE_DEL) return true
+        if (keyCode == KeyEvent.KEYCODE_ENTER) return true
+        if (keyCode == KeyEvent.KEYCODE_TAB) return true
+        // 方向键
+        if (keyCode >= KeyEvent.KEYCODE_DPAD_UP && keyCode <= KeyEvent.KEYCODE_DPAD_RIGHT) return true
+        return false
+    }
 
-    fun processKey(event: KeyEvent): Boolean {
+    fun processKeyUp(event: KeyEvent): Boolean {
         InputModeSwitcherManager.resetCharCase()
         if (processFunctionKeys(event)) return true
         return when {
@@ -87,15 +103,14 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 } else {
                     chooseAndUpdate()
                 }
+                if(keyCode == KeyEvent.KEYCODE_SPACE && event.isCtrlPressed ){
+                    InputModeSwitcherManager.switchModeForUserKey(InputModeSwitcherManager.USER_DEF_KEYCODE_LANG_2)
+                    resetToIdleState()
+                    Toast.makeText(context, if(InputModeSwitcherManager.isEnglish)"语燕输入法-英文" else "语燕输入法-拼音", Toast.LENGTH_LONG).show()
+                }
                 true
             }
             KeyEvent.KEYCODE_CLEAR -> {
-                resetToIdleState()
-                true
-            }
-
-            KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.KEYCODE_SHIFT_RIGHT -> {
-                InputModeSwitcherManager.switchModeForUserKey(InputModeSwitcherManager.USER_DEF_KEYCODE_LANG_2)
                 resetToIdleState()
                 true
             }

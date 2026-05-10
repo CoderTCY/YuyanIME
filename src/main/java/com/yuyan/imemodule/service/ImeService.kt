@@ -16,14 +16,14 @@ import com.yuyan.imemodule.data.theme.ThemeManager.OnThemeChangeListener
 import com.yuyan.imemodule.data.theme.ThemeManager.addOnChangedListener
 import com.yuyan.imemodule.data.theme.ThemeManager.onSystemDarkModeChange
 import com.yuyan.imemodule.data.theme.ThemeManager.removeOnChangedListener
+import com.yuyan.imemodule.keyboard.InputView
+import com.yuyan.imemodule.keyboard.KeyboardManager
+import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil
-import com.yuyan.imemodule.keyboard.InputView
-import com.yuyan.imemodule.keyboard.KeyboardManager
-import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.utils.LogUtil
 import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.utils.isDarkMode
 import com.yuyan.imemodule.view.preference.ManagedPreference
@@ -37,6 +37,7 @@ import splitties.bitflags.hasFlag
  * Main class of the Pinyin input method. 输入法服务
  */
 class ImeService : InputMethodService() {
+    private var isHardwareKeyboard = false
     private var isWindowShown = false // 键盘窗口是否已显示
     private lateinit var mInputView: InputView
     private lateinit var mCandidateView: CandidateView
@@ -72,6 +73,8 @@ class ImeService : InputMethodService() {
 
     override fun onStartInput(editorInfo: EditorInfo?, restarting: Boolean) {
         YuyanEmojiCompat.setEditorInfo(editorInfo)
+        isHardwareKeyboard =  resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS
+        if(isHardwareKeyboard) setCandidatesViewShown(true)
         if (::mCandidateView.isInitialized)mCandidateView.onStartInput(editorInfo, restarting)
         super.onStartInput(editorInfo, restarting)
     }
@@ -92,6 +95,8 @@ class ImeService : InputMethodService() {
      */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        isHardwareKeyboard = (newConfig.keyboard != Configuration.KEYBOARD_NOKEYS)
+        if(isHardwareKeyboard) setCandidatesViewShown(true)
         CoroutineScope(Dispatchers.Main).launch {
             delay(200) //延时，解决获取屏幕尺寸不准确。
             EnvironmentSingleton.instance.initData(baseContext)
@@ -103,22 +108,18 @@ class ImeService : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        //  0 != event.getRepeatCount()   单次点击onKeyDown操作不处理，在onKeyUp时处理；长按时才处理onKeyDown操作。
-        return if (::mCandidateView.isInitialized && InputModeSwitcherManager.isChinese) true
-        else if (0 != event.repeatCount) super.onKeyDown(keyCode, event)
-        else if (::mInputView.isInitialized) true
+        // 0 != event.getRepeatCount()  长按物理按键或 Ctrl&Meta的组合按键时，交由系统处理
+        return if (0 != event.repeatCount || event.isShiftPressed || event.isMetaPressed) super.onKeyDown(keyCode, event)
+        else if (isHardwareKeyboard) mCandidateView.processKeyDown(keyCode, event) || super.onKeyUp(keyCode, event)
+        else if (isWindowShown) mInputView.processKeyDown(keyCode, event) || super.onKeyUp(keyCode, event)
         else super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        return if (::mInputView.isInitialized){
-            setCandidatesViewShown(false)
-            mInputView.processKey(event) || super.onKeyUp(keyCode, event)
-        } else {
-            if (!::mCandidateView.isInitialized) setCandidatesViewShown(true)
-           val result =  mCandidateView.processKey(event)
-            if(!result) super.onKeyUp(keyCode, event) else false
-        }
+        return if (0 != event.repeatCount || event.isShiftPressed || event.isMetaPressed) super.onKeyDown(keyCode, event)
+        else if (isHardwareKeyboard) mCandidateView.processKeyUp(event) || super.onKeyUp(keyCode, event)
+        else if (isWindowShown) mInputView.processKeyUp(event) || super.onKeyUp(keyCode, event)
+        else super.onKeyDown(keyCode, event)
     }
 
     override fun setInputView(view: View) {

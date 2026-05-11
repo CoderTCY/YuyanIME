@@ -17,10 +17,13 @@ import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.service.DecodingInfo
 import com.yuyan.imemodule.service.ImeService
-import com.yuyan.imemodule.singleton.EnvironmentSingleton
+import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
 import com.yuyan.imemodule.utils.DevicesUtils
 import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.view.widget.LifecycleRelativeLayout
+import splitties.dimensions.dp
+import splitties.views.bottomPadding
+import splitties.views.leftPadding
 
 /**
  * 物理键盘输入界面。
@@ -28,6 +31,8 @@ import com.yuyan.imemodule.view.widget.LifecycleRelativeLayout
  */
 @SuppressLint("ViewConstructor")
 class CandidateView(context: Context, private val service: ImeService) : LifecycleRelativeLayout(context) {
+
+    private var mFloatCandidateBarWidth: Int = 0
     private val appPrefs = getInstance()
     private val mChoiceNotifier = ChoiceNotifier()
     var mSkbRoot: RelativeLayout
@@ -41,14 +46,14 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         DecodingInfo.candidatesLiveData.observe(this) {
             mSkbCandidatesBarView.showCandidates()
         }
-        initView(context)
+        mFloatCandidateBarWidth = if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth - dp(40)
+        initView()
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    fun initView(context: Context) {
+    fun initView() {
         mSkbCandidatesBarView.initialize(mChoiceNotifier)
-        val env = EnvironmentSingleton.instance
-        mSkbRoot.layoutParams.width = env.inputAreaWidth
+        mSkbRoot.layoutParams.width = mFloatCandidateBarWidth
         updateTheme()
     }
 
@@ -57,6 +62,13 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         val activeTheme = ThemeManager.activeTheme
         val keyTextColor = activeTheme.keyTextColor
         mSkbCandidatesBarView.updateTheme(keyTextColor)
+    }
+
+    fun updatePosition(anchor: FloatArray) {
+        leftPadding = if(!instance.isLandscape) 0
+         else if(instance.mScreenWidth - anchor[0] > mFloatCandidateBarWidth)anchor[0].toInt()
+        else instance.mScreenWidth - mFloatCandidateBarWidth
+        bottomPadding = instance.mScreenHeight - (instance.heightForCandidatesArea * 1.5).toInt() - anchor[1].toInt()
     }
 
     fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {

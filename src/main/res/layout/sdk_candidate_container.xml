@@ -4,8 +4,7 @@
     android:id="@+id/candidateView"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="20dp">
-    <!--候选词视图，即 键盘顶部分的视图，分情况显示候选词，或者显示顶部操作栏-->
+    android:layout_margin="10dp">
     <com.yuyan.imemodule.candidate.FloatCandidateBar
         android:id="@+id/candidates_bar"
         android:layout_width="wrap_content"

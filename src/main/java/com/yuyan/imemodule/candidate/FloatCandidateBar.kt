@@ -1,6 +1,7 @@
 package com.yuyan.imemodule.candidate
 
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
@@ -15,17 +16,19 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import com.yuyan.imemodule.adapter.CandidatesBarAdapter
 import com.yuyan.imemodule.callback.CandidateViewListener
-import com.yuyan.imemodule.service.DecodingInfo
-import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
+import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.keyboard.KeyboardManager
 import com.yuyan.imemodule.keyboard.container.CandidatesContainer
 import com.yuyan.imemodule.manager.layout.CustomLinearLayoutManager
+import com.yuyan.imemodule.service.DecodingInfo
+import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
 import splitties.dimensions.dp
 
 /**
  * 候选词集装箱
  */
 class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(context, attrs) {
+    private var mFloatCandidateBarWidth: Int = 0
 
     private lateinit var mCvListener: CandidateViewListener // 候选词视图监听器
     private lateinit var mCandidatesDataContainer: LinearLayout //候选词视图
@@ -37,6 +40,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
 
     fun initialize(cvListener: CandidateViewListener) {
         mCvListener = cvListener
+        mFloatCandidateBarWidth = if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth - dp(40)
         initCandidateView()
     }
 
@@ -98,10 +102,10 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
     fun showCandidates() {
         mComposingView.text = DecodingInfo.composingStrForDisplay
         if (DecodingInfo.isCandidatesListEmpty) {
-            mCandidatesDataContainer.visibility = GONE
+            this.visibility = GONE
         } else {
             if (DecodingInfo.candidateSize > DecodingInfo.activeCandidateBar) mRVCandidates.layoutManager?.scrollToPosition(DecodingInfo.activeCandidateBar)
-            mCandidatesDataContainer.visibility = VISIBLE
+            this.visibility = VISIBLE
         }
         activeCandNo = 0
         mCandidatesAdapter.activeCandidates(activeCandNo)
@@ -143,7 +147,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val heightMeasure = MeasureSpec.makeMeasureSpec(instance.heightForCandidatesArea, MeasureSpec.EXACTLY)
-        val widthMeasure = MeasureSpec.makeMeasureSpec(instance.skbWidth, MeasureSpec.EXACTLY)
+        val widthMeasure = MeasureSpec.makeMeasureSpec(mFloatCandidateBarWidth, MeasureSpec.EXACTLY)
         super.onMeasure(widthMeasure, heightMeasure)
     }
 
@@ -151,6 +155,12 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
     fun updateTheme(textColor: Int) {
         initCandidateView()
         mComposingView.setTextColor(textColor)
+        val drawable = GradientDrawable()
+        drawable.setShape(GradientDrawable.RECTANGLE)
+        drawable.setColor(ThemeManager.activeTheme.keyboardColor)
+        val cornerRadiusInPx = 30f
+        drawable.setCornerRadius(cornerRadiusInPx)
+        background = drawable
         mCandidatesAdapter.notifyChanged()
     }
 }

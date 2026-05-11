@@ -8,7 +8,9 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import com.yuyan.imemodule.candidate.CandidateView
 import com.yuyan.imemodule.data.emojicon.YuyanEmojiCompat
 import com.yuyan.imemodule.data.theme.Theme
@@ -23,7 +25,6 @@ import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil
-import com.yuyan.imemodule.utils.LogUtil
 import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.utils.isDarkMode
 import com.yuyan.imemodule.view.preference.ManagedPreference
@@ -74,7 +75,10 @@ class ImeService : InputMethodService() {
     override fun onStartInput(editorInfo: EditorInfo?, restarting: Boolean) {
         YuyanEmojiCompat.setEditorInfo(editorInfo)
         isHardwareKeyboard =  resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS
-        if(isHardwareKeyboard) setCandidatesViewShown(true)
+        if(isHardwareKeyboard) {
+            setCandidatesViewShown(true)
+            currentInputConnection.requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR)
+        }
         if (::mCandidateView.isInitialized)mCandidateView.onStartInput(editorInfo, restarting)
         super.onStartInput(editorInfo, restarting)
     }
@@ -96,13 +100,18 @@ class ImeService : InputMethodService() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         isHardwareKeyboard = (newConfig.keyboard != Configuration.KEYBOARD_NOKEYS)
-        if(isHardwareKeyboard) setCandidatesViewShown(true)
         CoroutineScope(Dispatchers.Main).launch {
             delay(200) //延时，解决获取屏幕尺寸不准确。
             EnvironmentSingleton.instance.initData(baseContext)
-            KeyboardLoaderUtil.instance.clearKeyboardMap()
-            KeyboardManager.instance.clearKeyboard()
-            if (::mInputView.isInitialized) KeyboardManager.instance.switchKeyboard()
+            if(isHardwareKeyboard){
+                setCandidatesViewShown(true)
+                currentInputConnection.requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR)
+                mCandidateView.initView()
+            } else if (::mInputView.isInitialized) {
+                KeyboardLoaderUtil.instance.clearKeyboardMap()
+                KeyboardManager.instance.clearKeyboard()
+                KeyboardManager.instance.switchKeyboard()
+            }
         }
         onSystemDarkModeChange(newConfig.isDarkMode())
     }
@@ -139,7 +148,12 @@ class ImeService : InputMethodService() {
         else if (::mCandidateView.isInitialized) intArrayOf(0, 0).also {mCandidateView.mSkbRoot.getLocationInWindow(it) }
         else intArrayOf(0, 0)
         outInsets.apply {
-            if(EnvironmentSingleton.instance.keyboardModeFloat) {
+            if(isHardwareKeyboard) {
+                contentTopInsets = EnvironmentSingleton.instance.mScreenHeight
+                visibleTopInsets = EnvironmentSingleton.instance.mScreenHeight
+                touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+                touchableRegion.set(x, y, x + mCandidateView.mSkbRoot.width, y + mCandidateView.mSkbRoot.height)
+            } else if(EnvironmentSingleton.instance.keyboardModeFloat) {
                 contentTopInsets = EnvironmentSingleton.instance.mScreenHeight
                 visibleTopInsets = EnvironmentSingleton.instance.mScreenHeight
                 touchableInsets = Insets.TOUCHABLE_INSETS_REGION
@@ -156,6 +170,19 @@ class ImeService : InputMethodService() {
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         if (::mInputView.isInitialized) mInputView.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesEnd)
+    }
+
+    private val cursorAnchorPosition = FloatArray(2)
+    override fun onUpdateCursorAnchorInfo(cursorAnchorInfo: CursorAnchorInfo?) {
+        super.onUpdateCursorAnchorInfo(cursorAnchorInfo)
+        if (!isHardwareKeyboard || cursorAnchorInfo == null) return
+        cursorAnchorPosition[0] = cursorAnchorInfo.insertionMarkerHorizontal
+        cursorAnchorPosition[1] = cursorAnchorInfo.insertionMarkerBottom
+        val matrix = cursorAnchorInfo.getMatrix()
+        if (matrix != null) {
+            matrix.mapPoints(cursorAnchorPosition)
+        }
+        mCandidateView.updatePosition(cursorAnchorPosition)
     }
 
     override fun onWindowShown() {

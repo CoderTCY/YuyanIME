@@ -2,12 +2,16 @@ package com.yuyan.imemodule.candidate
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.core.text.isDigitsOnly
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.callback.CandidateViewListener
 import com.yuyan.imemodule.data.theme.ThemeManager
@@ -24,6 +28,7 @@ import com.yuyan.imemodule.view.widget.LifecycleRelativeLayout
 import splitties.dimensions.dp
 import splitties.views.bottomPadding
 import splitties.views.leftPadding
+import kotlin.math.max
 
 /**
  * 物理键盘输入界面。
@@ -32,6 +37,7 @@ import splitties.views.leftPadding
 @SuppressLint("ViewConstructor")
 class CandidateView(context: Context, private val service: ImeService) : LifecycleRelativeLayout(context) {
 
+    private var mHorizontalCutoutWidth: Int = 0
     private var mFloatCandidateBarWidth: Int = 0
     private val appPrefs = getInstance()
     private val mChoiceNotifier = ChoiceNotifier()
@@ -40,14 +46,31 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     init {
         InputModeSwitcherManager.reset()
+        initDisplayCutout(service)
+        mFloatCandidateBarWidth = (if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth) - dp(40)
         mSkbRoot = LayoutInflater.from(context).inflate(R.layout.sdk_candidate_container, this, false) as RelativeLayout
         addView(mSkbRoot)
         mSkbCandidatesBarView = mSkbRoot.findViewById(R.id.candidates_bar)
         DecodingInfo.candidatesLiveData.observe(this) {
             mSkbCandidatesBarView.showCandidates()
         }
-        mFloatCandidateBarWidth = if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth - dp(40)
         initView()
+    }
+
+    private fun initDisplayCutout(service: ImeService) {
+        ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val lp: WindowManager.LayoutParams? = service.window.window?.attributes
+                lp?.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                service.window.window?.setAttributes(lp)
+            }
+            val safeLeft = insets.getInsets(WindowInsetsCompat.Type.systemBars()).left
+            val safeRight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).right
+            val cutout = insets.displayCutout
+            val displayCutoutWidth = if(cutout!=null) max(cutout.safeInsetLeft, cutout.safeInsetRight) else 0
+            mHorizontalCutoutWidth = resources.displayMetrics.widthPixels - safeLeft - safeRight - displayCutoutWidth
+            insets
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -65,10 +88,12 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     }
 
     fun updatePosition(anchor: FloatArray) {
+        val bottom = instance.mScreenHeight - anchor[1].toInt()
+        val diffHight = (instance.heightForCandidatesArea * 1.5).toInt()
         leftPadding = if(!instance.isLandscape) 0
-         else if(instance.mScreenWidth - anchor[0] > mFloatCandidateBarWidth)anchor[0].toInt()
-        else instance.mScreenWidth - mFloatCandidateBarWidth
-        bottomPadding = instance.mScreenHeight - (instance.heightForCandidatesArea * 1.5).toInt() - anchor[1].toInt()
+         else if(mHorizontalCutoutWidth - anchor[0] > mFloatCandidateBarWidth)anchor[0].toInt() - dp(20)
+        else mHorizontalCutoutWidth - mFloatCandidateBarWidth
+        bottomPadding = if(bottom > diffHight) bottom - diffHight else bottom + instance.heightForCandidatesArea
     }
 
     fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {

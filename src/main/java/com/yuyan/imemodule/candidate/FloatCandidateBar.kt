@@ -40,7 +40,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
 
     fun initialize(cvListener: CandidateViewListener) {
         mCvListener = cvListener
-        mFloatCandidateBarWidth = if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth - dp(40)
+        mFloatCandidateBarWidth = (if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth) - dp(40)
         initCandidateView()
     }
 
@@ -49,7 +49,6 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
         if(!::mCandidatesDataContainer.isInitialized) {
             mCandidatesDataContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                visibility = GONE
             }
             mComposingView = TextView(context).apply {
                 includeFontPadding = false
@@ -158,7 +157,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
         val drawable = GradientDrawable()
         drawable.setShape(GradientDrawable.RECTANGLE)
         drawable.setColor(ThemeManager.activeTheme.keyboardColor)
-        val cornerRadiusInPx = 30f
+        val cornerRadiusInPx = 20f
         drawable.setCornerRadius(cornerRadiusInPx)
         background = drawable
         mCandidatesAdapter.notifyChanged()

@@ -11,82 +11,76 @@ import com.yuyan.inputmethod.core.Kernel
 /**
  * 输入法模式转换器。设置输入法的软键盘。
  */
-object InputModeSwitcherManager {
-
-    /**
-     * User defined key code, used by soft keyboard.
-     * 用户定义的key的code，用于软键盘。shift键的code。
-     */
-    const val USER_DEF_KEYCODE_SHIFT_1 = -1
+object InputModeSwitcher {
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,语言切换键。
      */
-    const val USER_DEF_KEYCODE_LANG_2 = -2
+    const val USER_KEYCODE_LANG = -2
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,符号键盘切换键。
      */
-    const val USER_DEF_KEYCODE_SYMBOL_3 = -3
+    const val USER_KEYCODE_SYMBOL = -3
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,表情键盘切换键。
      */
-    const val USER_DEF_KEYCODE_EMOJI_4 = -4
+    const val USER_KEYCODE_EMOJI = -4
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,数字键盘切换键。
      */
-    const val USER_DEF_KEYCODE_NUMBER_5 = -5
+    const val USER_KEYCODE_NUMBER = -5
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,数字键盘返回按键。
      */
-    const val USER_DEF_KEYCODE_RETURN_6 = -6
+    const val USER_KEYCODE_RETURN = -6
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,编辑键盘。
      */
-    const val USER_DEF_KEYCODE_TEXTEDIT_7 = -7
+    const val USER_KEYCODE_TEXTEDIT = -7
 
     /**
-     * User defined key code, used by soft keyboard. 表情逗号。
+     * User defined key code, used by soft keyboard. 逗号按钮，长按选择表情。
      */
-    const val USER_DEF_KEYCODE_EMOJI_8 = -8
+    const val USER_KEYCODE_COMMA_EMOJI = -8
 
     /**
      * User defined key code, used by soft keyboard. 方向控制。或谷歌键盘的重输按钮
      */
-    const val USER_DEF_KEYCODE_CURSOR_DIRECTION_9 = -9
+    const val USER_KEYCODE_CURSOR_DIRECTION = -9
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,九宫格、手写符号侧栏占位符。
      */
-    const val USER_DEF_KEYCODE_LEFT_SYMBOL_12 = -12
+    const val USER_KEYCODE_LEFT_SYMBOL = -12
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,逗号（中文：，;英文：,）。
      */
-    const val USER_DEF_KEYCODE_LEFT_COMMA_13 = -13
+    const val USER_KEYCODE_LEFT_COMMA = -13
     /**
      * User defined key code, used by soft keyboard. 语言键的code,句号（中文：。;英文：.）。
      */
-    const val USER_DEF_KEYCODE_LEFT_PERIOD_14 = -14
+    const val USER_KEYCODE_LEFT_PERIOD = -14
     /**
      * User defined key code, used by soft keyboard. 语言键的code,星号（*）。
      */
-    const val USER_DEF_KEYCODE_STAR_17 = -17
+    const val USER_KEYCODE_STAR = -17
 
     /**
      * User defined key code, used by soft keyboard. 编辑键盘方向
      */
-    const val USER_DEF_KEYCODE_SELECT_MODE = -18
-    const val USER_DEF_KEYCODE_SELECT_ALL = -19
-    const val USER_DEF_KEYCODE_CUT = -20
-    const val USER_DEF_KEYCODE_COPY = -21
-    const val USER_DEF_KEYCODE_PASTE = -22
-    const val USER_DEF_KEYCODE_MOVE_START = -23
-    const val USER_DEF_KEYCODE_MOVE_END = -24
+    const val USER_KEYCODE_SELECT_MODE = -18
+    const val USER_KEYCODE_SELECT_ALL = -19
+    const val USER_KEYCODE_CUT = -20
+    const val USER_KEYCODE_COPY = -21
+    const val USER_KEYCODE_PASTE = -22
+    const val USER_KEYCODE_MOVE_START = -23
+    const val USER_KEYCODE_MOVE_END = -24
 
 
     /**
@@ -200,9 +194,9 @@ object InputModeSwitcherManager {
 
     class ToggleStates {
         @JvmField
-        var charCase = MASK_CASE_LOWER
+        var modifiers = MASK_CASE_LOWER
         @JvmField
-		var mStateEnter = 0
+		var imeAction = 0
     }
 
     // 语言键盘
@@ -212,52 +206,6 @@ object InputModeSwitcherManager {
     // 键盘
     val skbLayout: Int
         get() = mInputMode and MASK_SKB_LAYOUT
-
-    // 记录SHIFT点击时间，作为双击判断
-    private var lsatClickTime = 0L
-
-    // 中文模式，临时切换为英文
-    private var isChineseMode = true
-    /**
-     * 通过我们定义的软键盘的按键，切换输入法模式。
-     */
-    fun switchModeForUserKey(userKey: Int) {
-        var newInputMode = MODE_UNSET
-        if (USER_DEF_KEYCODE_SHIFT_1 == userKey) {
-            if(isChinese && !isChineseMode)isChineseMode = true
-            mToggleStates.charCase = if(System.currentTimeMillis() - lsatClickTime < 300){
-                KeyEvent.META_CAPS_LOCK_ON
-            } else if (MASK_CASE_LOWER == mToggleStates.charCase) {
-                KeyEvent.META_SHIFT_ON
-            } else if (isChineseMode){
-                saveInputMode(getInstance().internal.inputMethodPinyinMode.getValue())
-                KeyboardManager.instance.switchKeyboard()
-                MASK_CASE_LOWER
-            } else {
-                MASK_CASE_LOWER
-            }
-            Kernel.setCharCase(mToggleStates.charCase)
-            lsatClickTime = System.currentTimeMillis()
-            (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
-            return
-        } else if (USER_DEF_KEYCODE_LANG_2 == userKey) {
-            newInputMode = if (isChinese) {
-                isChineseMode = false
-                mToggleStates.charCase = MASK_CASE_LOWER
-                MODE_SKB_ENGLISH_LOWER
-            } else {
-                getInstance().internal.inputMethodPinyinMode.getValue()
-            }
-        } else if (USER_DEF_KEYCODE_NUMBER_5 == userKey) {
-            newInputMode = MASK_SKB_LAYOUT_NUMBER
-        } else if (USER_DEF_KEYCODE_TEXTEDIT_7 == userKey) {
-            newInputMode = MASK_SKB_LAYOUT_TEXTEDIT
-        } else if (USER_DEF_KEYCODE_RETURN_6 == userKey) {
-            newInputMode = if (mRecentLauageInputMode != 0) mRecentLauageInputMode else getInstance().internal.inputMethodPinyinMode.getValue()
-        }
-        saveInputMode(newInputMode)
-        KeyboardManager.instance.switchKeyboard()
-    }
 
     /**
      * 根据编辑框的 EditorInfo 信息获取软键盘的输入法模式。
@@ -270,21 +218,58 @@ object InputModeSwitcherManager {
                 val v = editorInfo.inputType and EditorInfo.TYPE_MASK_VARIATION
                 newInputMode = if (v == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
                     || v == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
-                        MODE_SKB_ENGLISH_LOWER
-                    } else if(getInstance().keyboardSetting.keyboardLockEnglish.getValue()){
-                        getInstance().internal.inputDefaultMode.getValue()
-                    } else{
-                        getInstance().internal.inputMethodPinyinMode.getValue()
-                    }
+                    MODE_SKB_ENGLISH_LOWER
+                } else if(getInstance().keyboardSetting.keyboardLockEnglish.getValue()){
+                    getInstance().internal.inputDefaultMode.getValue()
+                } else{
+                    getInstance().internal.inputMethodPinyinMode.getValue()
+                }
             }
         }
         val hasNoEnterAction = (editorInfo.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0
-        val action = if(hasNoEnterAction) 0 else editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
-        mToggleStates.mStateEnter = action
+        mToggleStates.imeAction = if(hasNoEnterAction) 0 else editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
         if (newInputMode != mInputMode && MODE_UNSET != newInputMode) {
             saveInputMode(newInputMode)
             KeyboardManager.instance.switchKeyboard()
         }
+        (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
+    }
+
+    /**
+     * 通过我们定义的软键盘的按键，切换输入法模式。
+     */
+    fun switchModeForUserKey(userKey: Int) {
+        var newInputMode = MODE_UNSET
+        if (USER_KEYCODE_LANG == userKey) {
+            newInputMode = if (isChinese) MODE_SKB_ENGLISH_LOWER else getInstance().internal.inputMethodPinyinMode.getValue()
+        } else if (USER_KEYCODE_NUMBER == userKey) {
+            newInputMode = MASK_SKB_LAYOUT_NUMBER
+        } else if (USER_KEYCODE_TEXTEDIT == userKey) {
+            newInputMode = MASK_SKB_LAYOUT_TEXTEDIT
+        } else if (USER_KEYCODE_RETURN == userKey) {
+            newInputMode = if (mRecentLauageInputMode != 0) mRecentLauageInputMode else getInstance().internal.inputMethodPinyinMode.getValue()
+        }
+        saveInputMode(newInputMode)
+        mToggleStates.modifiers = when(Kernel.getCurrentRimeSchema()) {
+            CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
+            else -> MASK_CASE_LOWER
+        }
+        KeyboardManager.instance.switchKeyboard()
+    }
+
+    // 记录SHIFT点击时间，作为双击判断
+    private var lsatClickTime = 0L
+
+    fun processShiftKey(userKey: Int) {
+        mToggleStates.modifiers = if(System.currentTimeMillis() - lsatClickTime < 300){
+            KeyEvent.META_CAPS_LOCK_ON
+        } else if (MASK_CASE_LOWER == mToggleStates.modifiers) {
+            KeyEvent.META_SHIFT_ON
+        } else {
+            MASK_CASE_LOWER
+        }
+        Kernel.setCharCase(mToggleStates.modifiers)
+        lsatClickTime = System.currentTimeMillis()
         (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
     }
 
@@ -324,8 +309,8 @@ object InputModeSwitcherManager {
          * 是否是软件盘英语模式
          */
         get() = mInputMode and MASK_LANGUAGE == MASK_LANGUAGE_EN
-    val isEnglishLower: Boolean
-        get() = isEnglish && mToggleStates.charCase == MASK_CASE_LOWER
+    val isLower: Boolean
+        get() = mToggleStates.modifiers == MASK_CASE_LOWER
 
     /**
      * 保存新的输入法模式
@@ -333,7 +318,6 @@ object InputModeSwitcherManager {
     fun saveInputMode(newInputMode: Int) {
         mInputMode = newInputMode // 设置新的输入法模式为当前的输入法模式
         if (isEnglish) {
-            mToggleStates.charCase = MASK_CASE_LOWER
             Kernel.initImeSchema(CustomConstant.SCHEMA_EN)
         } else {
             Kernel.initImeSchema(getInstance().internal.pinyinModeRime.getValue())
@@ -348,8 +332,8 @@ object InputModeSwitcherManager {
      * 大写模式下输入任何按键后，Shift按键状态重置一下
      */
     fun resetCharCase() {
-        if(mToggleStates.charCase == KeyEvent.META_SHIFT_ON){
-            mToggleStates.charCase = MASK_CASE_LOWER
+        if(mToggleStates.modifiers == KeyEvent.META_SHIFT_ON){
+            mToggleStates.modifiers = MASK_CASE_LOWER
             (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
         }
     }

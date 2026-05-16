@@ -7,7 +7,7 @@ import android.view.View
 import com.yuyan.imemodule.application.Launcher
 import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.entity.keyboard.SoftKey
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.PopupMenuMode
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
@@ -79,13 +79,13 @@ class PopupComponent private constructor(){
 
     fun showKeyboardMenu(mCurrentKey: SoftKey, bounds: Rect, distanceY: Float) {
         val key = when(mCurrentKey.code) {
-            InputModeSwitcherManager.USER_DEF_KEYCODE_LANG_2 ->  Pair(PopupMenuMode.SwitchIME, "🌐")
-            InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 ->  Pair(PopupMenuMode.EMOJI, "😆")
-            InputModeSwitcherManager.USER_DEF_KEYCODE_SHIFT_1 -> {
+            InputModeSwitcher.USER_KEYCODE_LANG ->  Pair(PopupMenuMode.SwitchIME, "🌐")
+            InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI ->  Pair(PopupMenuMode.EMOJI, "😆")
+            KeyEvent.KEYCODE_SHIFT_LEFT -> {
                 Pair(PopupMenuMode.EnglishCell, if(AppPrefs.getInstance().input.abcSearchEnglishCell.getValue()) "直输模式" else "拼写模式")
             }
             KeyEvent.KEYCODE_DEL -> Pair(PopupMenuMode.Clear,  "🔙 上滑清空")
-            InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9 -> Pair(PopupMenuMode.Move,  "")
+            InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION -> Pair(PopupMenuMode.Move,  "")
             else ->  Pair(PopupMenuMode.Enter,  "↩️ 换行")
         }
         showingEntryUi?.setText("") ?: showPopup("", bounds)

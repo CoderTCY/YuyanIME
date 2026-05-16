@@ -13,7 +13,7 @@ import com.yuyan.imemodule.entity.handwriting.Bezier
 import com.yuyan.imemodule.entity.handwriting.ControlTimedPoints
 import com.yuyan.imemodule.entity.handwriting.TimedPoint
 import com.yuyan.imemodule.entity.keyboard.SoftKey
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.inputmethod.HWEngine
 import java.util.LinkedList
@@ -66,7 +66,7 @@ class HandwritingKeyboard(context: Context?) : TextKeyboard(context) {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(me: MotionEvent): Boolean {
-        if(!isEnabled || !InputModeSwitcherManager.isChineseHandWriting || mLongPressKey) {
+        if(!isEnabled || !InputModeSwitcher.isChineseHandWriting || mLongPressKey) {
             return super.onTouchEvent(me)
         }
         val eventX = me.x

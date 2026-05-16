@@ -38,7 +38,7 @@ import com.yuyan.imemodule.keyboard.container.CandidatesContainer
 import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
 import com.yuyan.imemodule.keyboard.container.SymbolContainer
 import com.yuyan.imemodule.keyboard.container.T9TextContainer
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.prefs.behavior.KeyboardOneHandedMod
 import com.yuyan.imemodule.prefs.behavior.PopupMenuMode
@@ -73,7 +73,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     private val clipboardItemTimeout = appPrefs.clipboard.clipboardItemTimeout.getValue()
     private var chinesePrediction = true
     var isAddPhrases = false
-    private var mImeState = ImeState.STATE_IDLE
     private val mChoiceNotifier = ChoiceNotifier()
     var mSkbRoot: RelativeLayout
     var mSkbCandidatesBarView: CandidatesBar
@@ -93,7 +92,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     init {
         initNavbarBackground(service)
-        InputModeSwitcherManager.reset()
+        InputModeSwitcher.reset()
         mSkbRoot = LayoutInflater.from(context).inflate(R.layout.sdk_skb_container, this, false) as RelativeLayout
         addView(mSkbRoot)
         mSkbCandidatesBarView = mSkbRoot.findViewById(R.id.candidates_bar)
@@ -275,83 +274,10 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         }
     }
 
-    override fun responseKeyEvent(sKey: SoftKey) {
-        val keyCode = sKey.code
-        if (sKey.isKeyCodeKey) {
-            mImeState = ImeState.STATE_INPUT
-            val metaState = when(Kernel.getCurrentRimeSchema()) {
-                CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
-                else -> InputModeSwitcherManager.mToggleStates.charCase
-            }
-            processKeyUp(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
-        } else if (sKey.isUserDefKey || sKey.isUniStrKey) {
-            handleUserDefKey(keyCode, sKey.keyLabel)
-        }
-    }
-
-    private fun handleUserDefKey(keyCode: Int, label: String) {
-        when {
-            keyCode == InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9 -> {
-                resetToIdleState()
-                return
-            }
-            !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty -> {
-                if (InputModeSwitcherManager.isChinese || InputModeSwitcherManager.isEnglish) chooseAndUpdate()
-            }
-        }
-
-        when (keyCode) {
-            InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 -> {
-                KeyboardManager.instance.switchKeyboard(KeyboardManager.KeyboardType.SYMBOL)
-                (KeyboardManager.instance.currentContainer as? SymbolContainer)?.setSymbolsView()
-            }
-            InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 -> onSettingsMenuClick(SkbMenuMode.Emojicon)
-            InputModeSwitcherManager.USER_DEF_KEYCODE_SHIFT_1 -> {
-                val targetCode = when {
-                    InputModeSwitcherManager.isChineseT9 -> InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5
-                    InputModeSwitcherManager.isNumberSkb -> InputModeSwitcherManager.USER_DEF_KEYCODE_RETURN_6
-                    else -> keyCode
-                }
-                InputModeSwitcherManager.switchModeForUserKey(targetCode)
-            }
-            in InputModeSwitcherManager.USER_DEF_KEYCODE_RETURN_6..InputModeSwitcherManager.USER_DEF_KEYCODE_SHIFT_1 -> {
-                InputModeSwitcherManager.switchModeForUserKey(keyCode)
-            }
-            in InputModeSwitcherManager.USER_DEF_KEYCODE_PASTE..InputModeSwitcherManager.USER_DEF_KEYCODE_CUT -> {
-                commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
-            }
-            InputModeSwitcherManager.USER_DEF_KEYCODE_MOVE_START -> service.setSelection(0, if (hasSelection) selEnd else 0)
-            InputModeSwitcherManager.USER_DEF_KEYCODE_MOVE_END -> {
-                if (hasSelection) {
-                    val start = selStart
-                    commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_ALL])
-                    postDelayed(50) { service.setSelection(start, selEnd) }
-                } else {
-                    commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_ALL])
-                    service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
-                }
-            }
-            InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_MODE -> {
-                hasSelection = !hasSelection
-                if (!hasSelection) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
-            }
-            InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_ALL -> {
-                hasSelectionAll = !hasSelectionAll
-                if (!hasSelectionAll) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
-                else commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
-            }
-            else -> {
-                if(label.isNotEmpty()){
-                    if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
-                }
-            }
-        }
-    }
-
     override fun responseLongKeyEvent(result: Pair<PopupMenuMode, String>) {
         val (mode, value) = result
         if (mode != PopupMenuMode.None && !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty) {
-            if (InputModeSwitcherManager.isChinese || InputModeSwitcherManager.isEnglish) chooseAndUpdate()
+            if (InputModeSwitcher.isChinese || InputModeSwitcher.isEnglish) chooseAndUpdate()
         }
 
         when (mode) {
@@ -380,8 +306,24 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     override fun responseHandwritingResultEvent(words: Array<CandidateListItem>) {
         DecodingInfo.isAssociate = false
         DecodingInfo.cacheCandidates(words)
-        mImeState = ImeState.STATE_INPUT
     }
+
+    override fun responseKeyEvent(sKey: SoftKey) {
+        val keyCode = sKey.code
+        if(sKey.isUserDefKey)processUserDefKey(keyCode, sKey.keyLabel)
+        else if(sKey.isUniStrKey){
+            sKey.label.takeIf(String::isNotEmpty)?.let {
+                if (SymbolPreset.containsKey(it)) commitPairSymbol(it) else commitText(it)
+            }
+        } else {
+            val metaState = when(Kernel.getCurrentRimeSchema()) {
+                CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
+                else -> InputModeSwitcher.mToggleStates.modifiers
+            }
+            processKeyUp(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
+        }
+    }
+
 
     fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         // 字母、数字、符号、空格
@@ -398,14 +340,19 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     fun processKeyUp(event: KeyEvent): Boolean {
-        InputModeSwitcherManager.resetCharCase()
-        if (processFunctionKeys(event)) return true
-        val englishCellDisable = InputModeSwitcherManager.isEnglish && !appPrefs.input.abcSearchEnglishCell.getValue()
+        if(event.isSystem) return processSystemKeys(event)
+        else if(isFunctionKey(event.keyCode)){
+            processFunctionKey(event)
+            return true
+        }
+        InputModeSwitcher.resetCharCase()
+        val englishCellDisable = InputModeSwitcher.isEnglish && !appPrefs.input.abcSearchEnglishCell.getValue()
         return when {
             englishCellDisable -> processEnglishKey(event)
-            InputModeSwitcherManager.isEnglish || InputModeSwitcherManager.isChinese -> processInput(event)
+            InputModeSwitcher.isEnglish || InputModeSwitcher.isChinese -> processInput(event)
             else -> processEnglishKey(event)
         }
+//        return if(appPrefs.input.abcSearchEnglishCell.getValue() || InputModeSwitcherManager.isChinese)processInput(event) else processEnglishKey(event)
     }
 
     private fun processEnglishKey(event: KeyEvent): Boolean {
@@ -429,39 +376,80 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         return result
     }
 
-    private fun processFunctionKeys(event: KeyEvent): Boolean {
-        return when (val keyCode = event.keyCode) {
+    // 系统按键只处理返回键，当点击返回键且软键盘显示时，隐藏键盘并消费事件
+    private fun processSystemKeys(event: KeyEvent): Boolean {
+        return when (event.keyCode) {
             KeyEvent.KEYCODE_BACK -> if (service.isInputViewShown) { requestHideSelf(); true } else false
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
-                if (DecodingInfo.isFinish || (DecodingInfo.isAssociate && !mSkbCandidatesBarView.isActiveCand())) {
-                    sendKeyEvent(keyCode)
-                    resetToIdleState()
-                } else {
-                    chooseAndUpdate()
-                }
-                true
-            }
-            KeyEvent.KEYCODE_CLEAR -> {
-                resetToIdleState()
-                true
-            }
+            else -> false
+        }
+    }
+
+    fun isFunctionKey(keyCode: Int): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_CLEAR,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_SHIFT_LEFT,
+            KeyEvent.KEYCODE_SHIFT_RIGHT,
+            KeyEvent.KEYCODE_LANGUAGE_SWITCH,
+            KeyEvent.KEYCODE_SYM,
+            KeyEvent.KEYCODE_PICTSYMBOLS,
+            KeyEvent.KEYCODE_NUM -> return true
+        }
+        return false
+    }
+
+    private fun processFunctionKey(event: KeyEvent) {
+        when (val keyCode = event.keyCode) {
+            KeyEvent.KEYCODE_CLEAR -> resetToIdleState()
             KeyEvent.KEYCODE_ENTER -> {
                 if (DecodingInfo.isFinish || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
                 else commitDecInfoText(DecodingInfo.composingStrForCommit)
                 resetToIdleState()
-                true
             }
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (event.flags != KeyEvent.FLAG_SOFT_KEYBOARD && !DecodingInfo.isCandidatesListEmpty) {
-                    mSkbCandidatesBarView.updateActiveCandidateNo(keyCode)
-                } else if (DecodingInfo.isFinish || DecodingInfo.isAssociate) {
-                    sendKeyEvent(keyCode)
+            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> InputModeSwitcher.processShiftKey(keyCode)
+        }
+    }
+
+
+    private fun processUserDefKey(keyCode: Int, label: String) {
+        when {
+            keyCode == InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION -> {
+                resetToIdleState()
+                return
+            }
+            !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty -> {
+                if (InputModeSwitcher.isChinese || InputModeSwitcher.isEnglish) chooseAndUpdate()
+            }
+        }
+
+        when (keyCode) {
+            InputModeSwitcher.USER_KEYCODE_SYMBOL -> {
+                KeyboardManager.instance.switchKeyboard(KeyboardManager.KeyboardType.SYMBOL)
+                (KeyboardManager.instance.currentContainer as? SymbolContainer)?.setSymbolsView()
+            }
+            InputModeSwitcher.USER_KEYCODE_EMOJI -> onSettingsMenuClick(SkbMenuMode.Emojicon)
+            in InputModeSwitcher.USER_KEYCODE_RETURN..InputModeSwitcher.USER_KEYCODE_LANG -> InputModeSwitcher.switchModeForUserKey(keyCode)
+            in InputModeSwitcher.USER_KEYCODE_PASTE..InputModeSwitcher.USER_KEYCODE_CUT -> commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
+            InputModeSwitcher.USER_KEYCODE_MOVE_START -> service.setSelection(0, if (hasSelection) selEnd else 0)
+            InputModeSwitcher.USER_KEYCODE_MOVE_END -> {
+                if (hasSelection) {
+                    val start = selStart
+                    commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcher.USER_KEYCODE_SELECT_ALL])
+                    postDelayed(50) { service.setSelection(start, selEnd) }
                 } else {
-                    chooseAndUpdate()
+                    commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcher.USER_KEYCODE_SELECT_ALL])
+                    service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
                 }
-                true
             }
-            else -> false
+            InputModeSwitcher.USER_KEYCODE_SELECT_MODE -> {
+                hasSelection = !hasSelection
+                if (!hasSelection) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+            }
+            InputModeSwitcher.USER_KEYCODE_SELECT_ALL -> {
+                hasSelectionAll = !hasSelectionAll
+                if (!hasSelectionAll) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+                else commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
+            }
         }
     }
 
@@ -503,10 +491,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     fun resetToIdleState() {
-        if (mImeState == ImeState.STATE_IDLE)return
         resetCandidateWindow()
         if (hasSelectionAll) hasSelectionAll = false
-        mImeState = ImeState.STATE_IDLE
     }
 
     fun chooseAndUpdate(candId: Int = mSkbCandidatesBarView.getActiveCandNo()) {
@@ -522,7 +508,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             } else {
                 if (!DecodingInfo.isFinish) {
                     (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
-                    if (InputModeSwitcherManager.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
+                    if (InputModeSwitcher.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
                 } else {
                     resetToIdleState()
                 }
@@ -534,11 +520,10 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         DecodingInfo.updateDecodingCandidate()
         if (!DecodingInfo.isFinish) {
             (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
-            mImeState = if(DecodingInfo.isEngineFinish)ImeState.STATE_PREDICT else ImeState.STATE_INPUT
         } else {
             resetToIdleState()
         }
-        if (InputModeSwitcherManager.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
+        if (InputModeSwitcher.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
     }
 
     fun updateCandidateBar() = mSkbCandidatesBarView.showCandidates()
@@ -580,7 +565,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     fun onSettingsMenuClick(skbMenuMode: SkbMenuMode, extra: Phrase? = null) {
         if (skbMenuMode == SkbMenuMode.AddPhrases) {
             isAddPhrases = true
-            KeyboardManager.instance.switchKeyboard(InputModeSwitcherManager.skbImeLayout)
+            KeyboardManager.instance.switchKeyboard(InputModeSwitcher.skbImeLayout)
             initView(context)
             if (extra != null) {
                 DataBaseKT.instance.phraseDao().deleteByContent(extra.content)
@@ -594,8 +579,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         mSkbCandidatesBarView.initMenuView()
     }
 
-    enum class ImeState { STATE_IDLE, STATE_INPUT, STATE_PREDICT }
-
     fun selectPrefix(position: Int) {
         DevicesUtils.tryPlayKeyDown()
         DevicesUtils.tryVibrate(this)
@@ -604,7 +587,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     fun showSymbols(symbols: Array<String>) {
-        mImeState = ImeState.STATE_INPUT
         val list = symbols.map { CandidateListItem("📋", it) }.toTypedArray()
         DecodingInfo.cacheCandidates(list)
         DecodingInfo.isAssociate = true
@@ -666,7 +648,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             mAddPhrasesLayout.commitText(resultText)
         } else {
             service.commitText(StringUtils.converted2FlowerTypeface(resultText))
-            if (InputModeSwitcherManager.isEnglish){
+            if (InputModeSwitcher.isEnglish){
                 service.finishComposingText()
                 if(appPrefs.input.abcSpaceAuto.getValue()) service.commitText(" ")
                 resetToIdleState()
@@ -703,7 +685,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
-        InputModeSwitcherManager.requestInputWithSkb(editorInfo)
+        InputModeSwitcher.requestInputWithSkb(editorInfo)
         if (!restarting) {
             resetToIdleState()
             val clipboard = appPrefs.clipboard
@@ -742,7 +724,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesEnd: Int) {
         selStart = newSelStart
         selEnd = newSelEnd
-        if (InputModeSwitcherManager.isEnglish ) {
+        if (InputModeSwitcher.isEnglish ) {
             if (oldCandidatesEnd == candidatesEnd) {
                 service.finishComposingText()
                 resetToIdleState()
@@ -757,12 +739,12 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             return
         }
         when {
-            InputModeSwitcherManager.isNumberSkb -> {
+            InputModeSwitcher.isNumberSkb -> {
                 CustomEngine.parseExpressionAtEnd(textBeforeCursor).let {
                     CustomEngine.expressionCalculator(textBeforeCursor, it).let(::showSymbols)
                 }
             }
-            chinesePrediction && InputModeSwitcherManager.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
+            chinesePrediction && InputModeSwitcher.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
                 DecodingInfo.isAssociate = true
                 DecodingInfo.getAssociateWord(textBeforeCursor.takeLast(10))
                 updateCandidate()

@@ -22,7 +22,7 @@ import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.keyboard.KeyboardManager
 import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
 import com.yuyan.imemodule.keyboard.container.SymbolContainer
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
 import splitties.views.padding
 
@@ -107,7 +107,7 @@ class CandidatesMenuAdapter(context: Context?) : RecyclerView.Adapter<Candidates
             SkbMenuMode.Pinyin26Double -> rimeValue.startsWith(CustomConstant.SCHEMA_ZH_DOUBLE_FLYPY) && rimeValue != CustomConstant.SCHEMA_ZH_DOUBLE_LX17
             SkbMenuMode.PinyinStroke -> rimeValue == CustomConstant.SCHEMA_ZH_STROKE
             SkbMenuMode.LockClipBoard -> CustomConstant.lockClipBoardEnable
-            SkbMenuMode.TextEdit -> InputModeSwitcherManager.isTextEditSkb
+            SkbMenuMode.TextEdit -> InputModeSwitcher.isTextEditSkb
             else -> false
         }
         return result

@@ -16,7 +16,7 @@ import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.database.DataBaseKT
 import com.yuyan.imemodule.database.entry.SideSymbol
 import com.yuyan.imemodule.entity.keyboard.SoftKey
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.service.DecodingInfo
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.AppUtil
@@ -35,7 +35,7 @@ import splitties.views.dsl.core.margin
  * 包含输入键盘键盘[TextKeyboard]及拼音选择界面两层。
  *
  * 其中：
- *  输入键盘占据全部空间，左上角由拼音选择栏占位按键[InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_SYMBOL_12]站位。
+ *  输入键盘占据全部空间，左上角由拼音选择栏占位按键[InputModeSwitcher.USER_KEYCODE_LEFT_SYMBOL]站位。
  *
  *  拼音选择栏（无拼音时显示中文符号）位于键盘左上角，拼音选择栏占位按键正上方。
  */
@@ -60,11 +60,11 @@ open class T9TextContainer(context: Context?, inputView: InputView, skbValue: In
         }
         ivAddSymbol.setOnClickListener { _:View ->
             val arguments = Bundle()
-            arguments.putInt("type", if(skbValue == InputModeSwitcherManager.MASK_SKB_LAYOUT_NUMBER) 1 else 0)
+            arguments.putInt("type", if(skbValue == InputModeSwitcher.MASK_SKB_LAYOUT_NUMBER) 1 else 0)
             AppUtil.launchSettingsToPrefix(context!!, arguments)
         }
         mLlAddSymbol.addView(ivAddSymbol)
-        mSideSymbolsPinyin =  if(skbValue == InputModeSwitcherManager.MASK_SKB_LAYOUT_NUMBER) DataBaseKT.instance.sideSymbolDao().getAllSideSymbolNumber()
+        mSideSymbolsPinyin =  if(skbValue == InputModeSwitcher.MASK_SKB_LAYOUT_NUMBER) DataBaseKT.instance.sideSymbolDao().getAllSideSymbolNumber()
                 else DataBaseKT.instance.sideSymbolDao().getAllSideSymbolPinyin()
     }
 
@@ -87,7 +87,7 @@ open class T9TextContainer(context: Context?, inputView: InputView, skbValue: In
     // 更新键盘上侧边符号列表
     private fun updateKeyboardView() {
         val softKeyboard = mMajorView!!.getSoftKeyboard()
-        val softKeySymbolHolder = softKeyboard.getKeyByCode(InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_SYMBOL_12) ?: return
+        val softKeySymbolHolder = softKeyboard.getKeyByCode(InputModeSwitcher.USER_KEYCODE_LEFT_SYMBOL) ?: return
         val prefixLayoutParams = LayoutParams(softKeySymbolHolder.width(), LayoutParams.MATCH_PARENT)
         prefixLayoutParams.setMargins(
             softKeyboard.keyXMargin,

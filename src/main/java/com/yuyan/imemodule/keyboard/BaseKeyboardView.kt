@@ -15,11 +15,10 @@ import android.view.View
 import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.entity.keyboard.SoftKey
 import com.yuyan.imemodule.entity.keyboard.SoftKeyboard
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.KeyboardSymbolSlideUpMod
 import com.yuyan.imemodule.prefs.behavior.PopupMenuMode
-import com.yuyan.imemodule.service.DecodingInfo
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.DevicesUtils
 import com.yuyan.imemodule.view.popup.PopupComponent
@@ -99,17 +98,17 @@ open class BaseKeyboardView(mContext: Context?) : View(mContext) {
         if(mCurrentKey != null) {
             val softKey = mCurrentKey!!
             val keyboardSymbol = ThemeManager.prefs.keyboardSymbol.getValue()
-            if (softKey.getkeyLabel().isNotBlank() && softKey.code != InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 ) {
-                val keyLabel = if (InputModeSwitcherManager.isEnglishLower) softKey.keyLabel.lowercase() else softKey.keyLabel
+            if (softKey.getkeyLabel().isNotBlank() && softKey.code != InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI ) {
+                val keyLabel = if (InputModeSwitcher.isLower) softKey.keyLabel.lowercase() else softKey.keyLabel
                 val designPreset = setOf("，", "。", ",", ".")
                 val smallLabel = if(designPreset.any { it == keyLabel } || !keyboardSymbol) "" else softKey.getmKeyLabelSmall()
                 val bounds = Rect(softKey.mLeft, softKey.mTop, softKey.mRight, softKey.mBottom)
                 popupComponent.showKeyboard(keyLabel, smallLabel, bounds)
                 mLongPressKey = true
-            } else if (softKey.code == InputModeSwitcherManager.USER_DEF_KEYCODE_LANG_2 ||
-                softKey.code == InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 ||
-                    softKey.code == InputModeSwitcherManager.USER_DEF_KEYCODE_SHIFT_1 ||
-                softKey.code == InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9 ||
+            } else if (softKey.code == InputModeSwitcher.USER_KEYCODE_LANG ||
+                softKey.code == InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI ||
+                    softKey.code == KeyEvent.KEYCODE_SHIFT_LEFT ||
+                softKey.code == InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION ||
                 softKey.code == KeyEvent.KEYCODE_DEL || softKey.code == KeyEvent.KEYCODE_ENTER){
                 val bounds = Rect(softKey.mLeft, softKey.mTop, softKey.mRight, softKey.mBottom)
                 popupComponent.showKeyboardMenu(softKey, bounds, currentDistanceY)
@@ -281,7 +280,7 @@ open class BaseKeyboardView(mContext: Context?) : View(mContext) {
                     }
             } else {
                 mService?.responseKeyEvent(
-                    if (mCurrentKey!!.code == InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9) {
+                    if (mCurrentKey!!.code == InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION) {
                         SoftKey(
                             if (currentDistanceX.absoluteValue >= currentDistanceY.absoluteValue) {
                                 if (currentDistanceX > 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT

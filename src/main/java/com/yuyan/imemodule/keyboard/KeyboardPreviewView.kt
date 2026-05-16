@@ -7,7 +7,7 @@ import android.widget.RelativeLayout
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.data.theme.Theme
 import com.yuyan.imemodule.data.theme.ThemeManager
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil
@@ -19,7 +19,7 @@ class KeyboardPreviewView(context: Context) : RelativeLayout(context) {
         val mSkbRoot = LayoutInflater.from(context).inflate(R.layout.sdk_skb_preview, this, false)
         val previewUi = mSkbRoot.findViewById<RelativeLayout>(R.id.skb_input_keyboard_view)
         qwerTextContainer = TextKeyboard(context)
-        val softKeyboard = KeyboardLoaderUtil.instance.getSoftKeyboard(AppPrefs.getInstance().internal.inputDefaultMode.getValue()  and InputModeSwitcherManager.MASK_SKB_LAYOUT)
+        val softKeyboard = KeyboardLoaderUtil.instance.getSoftKeyboard(AppPrefs.getInstance().internal.inputDefaultMode.getValue()  and InputModeSwitcher.MASK_SKB_LAYOUT)
         qwerTextContainer!!.setSoftKeyboard(softKeyboard)
         previewUi.addView(qwerTextContainer, LayoutParams(instance.skbWidth, instance.skbHeight))
         addView(mSkbRoot)

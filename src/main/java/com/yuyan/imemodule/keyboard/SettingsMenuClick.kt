@@ -4,7 +4,7 @@ import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.imemodule.application.Launcher
 import com.yuyan.imemodule.data.flower.FlowerTypefaceMode
 import com.yuyan.imemodule.data.theme.ThemeManager
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.prefs.behavior.SymbolMode
@@ -141,9 +141,9 @@ fun onSettingsMenuClick(inputView: InputView, skbMenuMode: SkbMenuMode) {
             CustomConstant.lockClipBoardEnable = !CustomConstant.lockClipBoardEnable
         }
         SkbMenuMode.TextEdit -> {
-            InputModeSwitcherManager.switchModeForUserKey(
-                if(InputModeSwitcherManager.isTextEditSkb) InputModeSwitcherManager.USER_DEF_KEYCODE_RETURN_6
-                else InputModeSwitcherManager.USER_DEF_KEYCODE_TEXTEDIT_7)
+            InputModeSwitcher.switchModeForUserKey(
+                if(InputModeSwitcher.isTextEditSkb) InputModeSwitcher.USER_KEYCODE_RETURN
+                else InputModeSwitcher.USER_KEYCODE_TEXTEDIT)
         }
         else ->{}
     }

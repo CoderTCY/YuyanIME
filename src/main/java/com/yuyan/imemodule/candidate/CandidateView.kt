@@ -16,7 +16,7 @@ import com.yuyan.imemodule.R
 import com.yuyan.imemodule.callback.CandidateViewListener
 import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.keyboard.KeyboardManager
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.service.DecodingInfo
@@ -45,7 +45,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     var mSkbCandidatesBarView: FloatCandidateBar
 
     init {
-        InputModeSwitcherManager.reset()
+        InputModeSwitcher.reset()
         initDisplayCutout(service)
         mFloatCandidateBarWidth = (if(instance.isLandscape)instance.mScreenHeight else instance.mScreenWidth) - dp(40)
         mSkbRoot = LayoutInflater.from(context).inflate(R.layout.sdk_candidate_container, this, false) as RelativeLayout
@@ -97,7 +97,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     }
 
     fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if(InputModeSwitcherManager.isEnglish) return false
+        if(InputModeSwitcher.isEnglish) return false
         // 字母、数字、符号、空格
         if (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z) return true
         if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) return true
@@ -113,15 +113,14 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     }
 
     fun processKeyUp(event: KeyEvent): Boolean {
-        InputModeSwitcherManager.resetCharCase()
+        InputModeSwitcher.resetCharCase()
         return if (processFunctionKeys(event)) true
-        else if (InputModeSwitcherManager.isChinese) processInput(event)
+        else if (InputModeSwitcher.isChinese) processInput(event)
         else  false
     }
 
     private fun processFunctionKeys(event: KeyEvent): Boolean {
         return when (val keyCode = event.keyCode) {
-            KeyEvent.KEYCODE_BACK -> if (service.isInputViewShown) { requestHideSelf(); true } else false
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
                 if (DecodingInfo.isFinish || (DecodingInfo.isAssociate && !mSkbCandidatesBarView.isActiveCand())) {
                     sendKeyEvent(keyCode)
@@ -130,9 +129,9 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                     chooseAndUpdate()
                 }
                 if(keyCode == KeyEvent.KEYCODE_SPACE && event.isCtrlPressed ){
-                    InputModeSwitcherManager.switchModeForUserKey(InputModeSwitcherManager.USER_DEF_KEYCODE_LANG_2)
+                    InputModeSwitcher.switchModeForUserKey(InputModeSwitcher.USER_KEYCODE_LANG)
                     resetToIdleState()
-                    Toast.makeText(context, if(InputModeSwitcherManager.isEnglish)"语燕输入法-英文" else "语燕输入法-拼音", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, if(InputModeSwitcher.isEnglish)"语燕输入法-英文" else "语燕输入法-拼音", Toast.LENGTH_LONG).show()
                 }
                 true
             }
@@ -238,7 +237,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     private fun commitDecInfoText(resultText: String?) {
         resultText ?: return
         service.commitText(StringUtils.converted2FlowerTypeface(resultText))
-        if (InputModeSwitcherManager.isEnglish){
+        if (InputModeSwitcher.isEnglish){
             service.finishComposingText()
             if(appPrefs.input.abcSpaceAuto.getValue()) service.commitText(" ")
             resetToIdleState()
@@ -246,7 +245,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     }
 
     fun onStartInput(editorInfo: EditorInfo?, restarting: Boolean) {
-        if(editorInfo != null)InputModeSwitcherManager.requestInputWithSkb(editorInfo)
+        if(editorInfo != null)InputModeSwitcher.requestInputWithSkb(editorInfo)
         if (!restarting) resetToIdleState()
     }
 

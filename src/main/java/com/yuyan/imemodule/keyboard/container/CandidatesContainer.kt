@@ -25,7 +25,7 @@ import com.yuyan.imemodule.data.theme.ThemeManager.activeTheme
 import com.yuyan.imemodule.database.DataBaseKT
 import com.yuyan.imemodule.database.entry.SideSymbol
 import com.yuyan.imemodule.entity.keyboard.SoftKey
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.service.DecodingInfo
 import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
 import com.yuyan.imemodule.utils.AppUtil
@@ -50,8 +50,8 @@ import splitties.views.dsl.core.wrapContent
 /**
  * 候选词键盘容器
  *
- * 选择候选词界面分两种效果：九宫格（[InputModeSwitcherManager.isChineseT9])情况下显示左侧拼音选择栏；全键、手写等情况下不显示拼音选择栏。
- * @see InputModeSwitcherManager.isChineseT9
+ * 选择候选词界面分两种效果：九宫格（[InputModeSwitcher.isChineseT9])情况下显示左侧拼音选择栏；全键、手写等情况下不显示拼音选择栏。
+ * @see InputModeSwitcher.isChineseT9
  */
 @SuppressLint("ViewConstructor")
 class CandidatesContainer(context: Context, inputView: InputView) : BaseContainer(context, inputView) {
@@ -184,7 +184,7 @@ class CandidatesContainer(context: Context, inputView: InputView) : BaseContaine
                 mCandidatesAdapter.notifyDataSetChanged()
             }
 //            if(DecodingInfo.candidateSize > DecodingInfo.activeCandidate) mRVSymbolsView.scrollToPosition(DecodingInfo.activeCandidate)
-            if (InputModeSwitcherManager.isChineseT9) {
+            if (InputModeSwitcher.isChineseT9) {
                 mRVLeftPrefix.visibility = VISIBLE
                 updatePrefixsView()
             }

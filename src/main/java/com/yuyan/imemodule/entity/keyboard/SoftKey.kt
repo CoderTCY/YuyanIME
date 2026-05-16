@@ -3,7 +3,7 @@ package com.yuyan.imemodule.entity.keyboard
 import android.graphics.drawable.Drawable
 import android.view.KeyEvent
 import com.yuyan.imemodule.keyboard.keyIconRecords
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import java.util.Objects
 
 /**
@@ -83,7 +83,7 @@ open class SoftKey(var code: Int = 0, var label: String = "", var labelSmall: St
 
     fun repeatable(): Boolean {
         return code == KeyEvent.KEYCODE_DEL
-                || code == InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9
+                || code == InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION
                 || code in KeyEvent.KEYCODE_DPAD_UP .. KeyEvent.KEYCODE_DPAD_RIGHT
     }
 

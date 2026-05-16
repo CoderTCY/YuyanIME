@@ -16,7 +16,7 @@ import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.database.DataBaseKT
 import com.yuyan.imemodule.database.entry.SideSymbol
 import com.yuyan.imemodule.entity.keyboard.SoftKey
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.AppUtil
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil.Companion.instance
@@ -73,7 +73,7 @@ class HandwritingContainer(context: Context?, inputView: InputView) : InputBaseC
             addView(mMajorView, params)
             (mMajorView as HandwritingKeyboard).setResponseKeyEvent(inputView)
         }
-        val softKeyboard = instance.getSoftKeyboard(InputModeSwitcherManager.MASK_SKB_LAYOUT_HANDWRITING)
+        val softKeyboard = instance.getSoftKeyboard(InputModeSwitcher.MASK_SKB_LAYOUT_HANDWRITING)
         mMajorView!!.setSoftKeyboard(softKeyboard)
         updateKeyboardView()
         mMajorView!!.invalidate()
@@ -91,7 +91,7 @@ class HandwritingContainer(context: Context?, inputView: InputView) : InputBaseC
         }
 
         val softKeyboard = mMajorView?.getSoftKeyboard()
-        val softKeySymbolHolder = softKeyboard?.getKeyByCode(InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_SYMBOL_12)
+        val softKeySymbolHolder = softKeyboard?.getKeyByCode(InputModeSwitcher.USER_KEYCODE_LEFT_SYMBOL)
         add(mRVRightSymbols, lParams (width =softKeySymbolHolder!!.width(), height = matchParent).apply{
             endOfParent(0)
             setMargins(softKeyboard.keyXMargin, softKeySymbolHolder.mTop + softKeyboard.keyYMargin,

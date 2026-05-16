@@ -1,7 +1,7 @@
 package com.yuyan.imemodule.ui.fragment
 
 import com.yuyan.imemodule.application.CustomConstant
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.DoublePinyinSchemaMode
 import com.yuyan.imemodule.ui.fragment.base.ManagedPreferenceFragment
@@ -21,15 +21,15 @@ class InputSettingsFragment: ManagedPreferenceFragment(AppPrefs.getInstance().in
     }
     private val schemaModeListener = ManagedPreference.OnChangeListener<DoublePinyinSchemaMode> { _, doublePYSchemaMode ->
         val doublePYSchema = CustomConstant.SCHEMA_ZH_DOUBLE_FLYPY + doublePYSchemaMode
-        val inputMode = 0x1000 or InputModeSwitcherManager.MASK_LANGUAGE_CN
+        val inputMode = 0x1000 or InputModeSwitcher.MASK_LANGUAGE_CN
         AppPrefs.getInstance().internal.inputMethodPinyinMode.setValue(inputMode)
         AppPrefs.getInstance().internal.pinyinModeRime.setValue(doublePYSchema)
         Kernel.initImeSchema(doublePYSchema)
         // 双拼辅助功能,需刷新键盘
         KeyboardLoaderUtil.instance.clearKeyboardMap()
         KeyboardManager.instance.clearKeyboard()
-        InputModeSwitcherManager.saveInputMode(inputMode)
-        KeyboardManager.instance.switchKeyboard(InputModeSwitcherManager.skbImeLayout)
+        InputModeSwitcher.saveInputMode(inputMode)
+        KeyboardManager.instance.switchKeyboard(InputModeSwitcher.skbImeLayout)
     }
 
     override fun onStart() {

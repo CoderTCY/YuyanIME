@@ -14,7 +14,7 @@ import com.yuyan.imemodule.data.theme.ThemeManager.activeTheme
 import com.yuyan.imemodule.database.DataBaseKT
 import com.yuyan.imemodule.database.entry.SkbFun
 import com.yuyan.imemodule.entity.SkbFunItem
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.DoublePinyinSchemaMode
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
@@ -217,14 +217,14 @@ class SettingsContainer(context: Context, inputView: InputView) : BaseContainer(
                 CustomConstant.SCHEMA_ZH_T9
             }
         }
-        val inputMode = keyboardValue or InputModeSwitcherManager.MASK_LANGUAGE_CN
+        val inputMode = keyboardValue or InputModeSwitcher.MASK_LANGUAGE_CN
         AppPrefs.getInstance().internal.inputMethodPinyinMode.setValue(inputMode)
         AppPrefs.getInstance().internal.pinyinModeRime.setValue(value)
         // 双拼辅助功能,需刷新键盘
         KeyboardLoaderUtil.instance.clearKeyboardMap()
         KeyboardManager.instance.clearKeyboard()
-        InputModeSwitcherManager.saveInputMode(inputMode)
+        InputModeSwitcher.saveInputMode(inputMode)
         inputView.resetToIdleState()
-        KeyboardManager.instance.switchKeyboard(InputModeSwitcherManager.skbImeLayout)
+        KeyboardManager.instance.switchKeyboard(InputModeSwitcher.skbImeLayout)
     }
 }

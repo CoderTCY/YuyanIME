@@ -10,7 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.entity.keyboard.SoftKey
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.FullDisplayCenterMode
 import com.yuyan.imemodule.prefs.behavior.FullDisplayKeyMode
@@ -81,7 +81,7 @@ class FullDisplayKeyboardBar(context: Context?, inputView: InputView) : LinearLa
     private fun onClick(keyMode:FullDisplayKeyMode){
         when(keyMode){
             FullDisplayKeyMode.SwitchIme -> InputMethodUtil.showPicker()
-            FullDisplayKeyMode.SwitchLanguage -> InputModeSwitcherManager.switchModeForUserKey(InputModeSwitcherManager.USER_DEF_KEYCODE_LANG_2)
+            FullDisplayKeyMode.SwitchLanguage -> InputModeSwitcher.switchModeForUserKey(InputModeSwitcher.USER_KEYCODE_LANG)
             FullDisplayKeyMode.Clipboard, FullDisplayKeyMode.Phrases -> {
                 if(KeyboardManager.instance.currentContainer is ClipBoardContainer){
                     KeyboardManager.instance.switchKeyboard()

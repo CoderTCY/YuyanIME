@@ -17,7 +17,7 @@ import com.yuyan.imemodule.data.theme.ThemeManager.prefs
 import com.yuyan.imemodule.entity.keyboard.SoftKey
 import com.yuyan.imemodule.entity.keyboard.SoftKeyToggle
 import com.yuyan.imemodule.entity.keyboard.SoftKeyboard
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.service.DecodingInfo
 import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
@@ -77,19 +77,12 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
      * 刷新按键状态
      */
     fun updateStates() {
-        if (InputModeSwitcherManager.isEnglish) {
-            var softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as? SoftKeyToggle? ?: return
-            softKey.enableToggleState( if(mService!!.isAddPhrases)4 else InputModeSwitcherManager.mToggleStates.mStateEnter)
-            softKey = mSoftKeyboard?.getKeyByCode(InputModeSwitcherManager.USER_DEF_KEYCODE_SHIFT_1) as SoftKeyToggle??: return
-            val isEnglishCell = AppPrefs.getInstance().input.abcSearchEnglishCell.getValue()
-            softKey.enableToggleState(InputModeSwitcherManager.mToggleStates.charCase + if(isEnglishCell) 3 else 0)
-            invalidateView()
-        } else {
-            val softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as? SoftKeyToggle? ?: return
-            if (softKey.enableToggleState(if(mService!!.isAddPhrases)4 else InputModeSwitcherManager.mToggleStates.mStateEnter)) {
-                invalidateKey()
-            }
-        }
+        var softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_ENTER) as? SoftKeyToggle
+        softKey?.enableToggleState( if(mService!!.isAddPhrases)4 else InputModeSwitcher.mToggleStates.imeAction)
+        softKey = mSoftKeyboard?.getKeyByCode(KeyEvent.KEYCODE_SHIFT_LEFT) as? SoftKeyToggle
+        val isEnglishCell = AppPrefs.getInstance().input.abcSearchEnglishCell.getValue()
+        softKey?.enableToggleState(InputModeSwitcher.mToggleStates.modifiers + if(isEnglishCell) 3 else 0)
+        invalidateView()
     }
 
     /**
@@ -152,7 +145,7 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
             mNormalKeyTextSize = env.keyTextSize
             mNormalKeyTextSizeSmall = env.keyTextSmallSize
             val keyXMargin = mSoftKeyboard!!.keyXMargin
-            val keyYMargin = if(skbStyleMode == SkbStyleMode.Google && InputModeSwitcherManager.isQwert) mSoftKeyboard!!.keyYMargin * 1.5
+            val keyYMargin = if(skbStyleMode == SkbStyleMode.Google && InputModeSwitcher.isQwert) mSoftKeyboard!!.keyYMargin * 1.5
                 else mSoftKeyboard!!.keyYMargin
             for (softKeys in mSoftKeyboard!!.mKeyRows) {
                 for (softKey in softKeys) {
@@ -178,7 +171,7 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
         bg.shape = GradientDrawable.RECTANGLE
         bg.cornerRadius = keyRadius.toFloat() // 设置圆角半径
         bg.setBounds(softKey.mLeft + keyXMargin, softKey.mTop + keyYMargin, softKey.mRight - keyXMargin, softKey.mBottom - keyYMargin)
-        if (softKey.pressed || (mService?.hasSelection == true && softKey.code == InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_MODE)) {
+        if (softKey.pressed || (mService?.hasSelection == true && softKey.code == InputModeSwitcher.USER_KEYCODE_SELECT_MODE)) {
             bg.setColor(mActiveTheme.keyPressHighlightColor)
             bg.draw(canvas)
         } else if (isKeyBorder) {
@@ -200,11 +193,11 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
                 bg.setBounds(softKey.mLeft + keyMarginX, softKey.mTop + keyMarginY, softKey.mRight - keyMarginX, softKey.mBottom - keyMarginY)
                 bg.draw(canvas)
         }
-        val keyLabel = if(InputModeSwitcherManager.isEnglish && InputModeSwitcherManager.isEnglishLower) softKey.keyLabel.lowercase() else softKey.keyLabel
+        val keyLabel = if(InputModeSwitcher.isLower) softKey.keyLabel.lowercase() else softKey.keyLabel
         val keyLabelSmall = softKey.getmKeyLabelSmall()
         val keyMnemonic = softKey.keyMnemonic
         val keyIcon = if(skbStyleMode == SkbStyleMode.Google && softKey.code == KeyEvent.KEYCODE_SPACE) null
-            else if(skbStyleMode == SkbStyleMode.Google && softKey.code == InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9 && !DecodingInfo.isCandidatesListEmpty) null
+            else if(skbStyleMode == SkbStyleMode.Google && softKey.code == InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION && !DecodingInfo.isCandidatesListEmpty) null
             else softKey.keyIcon
         val weightHeigth = softKey.height() / 4f
         val textColor = mActiveTheme.keyTextColor

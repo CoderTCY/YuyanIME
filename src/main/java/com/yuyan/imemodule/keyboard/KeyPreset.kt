@@ -1,7 +1,7 @@
 package com.yuyan.imemodule.keyboard
 
 import android.view.KeyEvent
-import com.yuyan.imemodule.manager.InputModeSwitcherManager
+import com.yuyan.imemodule.manager.InputModeSwitcher
 
 object KeyPreset {
     val qwertyKeyPreset: Map<Int, Array<String>> = hashMapOf(
@@ -33,13 +33,13 @@ object KeyPreset {
         KeyEvent.KEYCODE_B to arrayOf("B", "?"),
         KeyEvent.KEYCODE_N to arrayOf("N", "!"),
         KeyEvent.KEYCODE_M to arrayOf("M", "…"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf(","),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf(",", "."),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf(".", ","),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf(","),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf(",", "."),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf(".", ","),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val qwertyKeyNumberPreset: Map<Int, Array<String>> = hashMapOf(
@@ -71,13 +71,13 @@ object KeyPreset {
         KeyEvent.KEYCODE_B to arrayOf("B", "?"),
         KeyEvent.KEYCODE_N to arrayOf("N", "!"),
         KeyEvent.KEYCODE_M to arrayOf("M", "…"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf(","),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf(",", "."),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf(".", ","),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf(","),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf(",", "."),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf(".", ","),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val qwertyPYKeyPreset: Map<Int, Array<String>> = hashMapOf(
@@ -109,13 +109,13 @@ object KeyPreset {
         KeyEvent.KEYCODE_B to arrayOf("B", "？"),
         KeyEvent.KEYCODE_N to arrayOf("N", "！"),
         KeyEvent.KEYCODE_M to arrayOf("M", "……"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf("，"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf("，", "。"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("。", "，"),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf("，"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf("，", "。"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("。", "，"),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val qwertyPYKeyNumberPreset: Map<Int, Array<String>> = hashMapOf(
@@ -147,13 +147,13 @@ object KeyPreset {
         KeyEvent.KEYCODE_B to arrayOf("B", "？"),
         KeyEvent.KEYCODE_N to arrayOf("N", "！"),
         KeyEvent.KEYCODE_M to arrayOf("M", "……"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf("，"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf("，", "。"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("。", "，"),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf("，"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf("，", "。"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("。", "，"),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val lx17PYKeyPreset: Map<Int, Array<String>> = hashMapOf(
@@ -174,13 +174,13 @@ object KeyPreset {
         KeyEvent.KEYCODE_G to arrayOf("G", "？"),
         KeyEvent.KEYCODE_F to arrayOf("FC", "！"),
         KeyEvent.KEYCODE_T to arrayOf("T", "……"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf("，"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf("，", "。"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("。", "，"),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf("，"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf("，", "。"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("。", "，"),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val lx17PYKeyNumberPreset: Map<Int, Array<String>> = hashMapOf(
@@ -201,13 +201,13 @@ object KeyPreset {
         KeyEvent.KEYCODE_G to arrayOf("G", "7"),
         KeyEvent.KEYCODE_F to arrayOf("FC", "8"),
         KeyEvent.KEYCODE_T to arrayOf("T", "9"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf("，"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf("，", "。"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("。", "，"),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf("，"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf("，", "。"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("。", "，"),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格", "0"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val t9PYKeyPreset: Map<Int, Array<String>> = hashMapOf(
@@ -223,15 +223,15 @@ object KeyPreset {
         KeyEvent.KEYCODE_CLEAR to arrayOf("重输"),
         KeyEvent.KEYCODE_APOSTROPHE to arrayOf("分词", "1"),
         KeyEvent.KEYCODE_AT to arrayOf("@"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf("，"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf("，", "。"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("。", "，"),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf("，"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf("，", "。"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("。", "，"),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格", "0"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_RETURN_6 to arrayOf("返回"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_CURSOR_DIRECTION_9 to arrayOf("清除"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_RETURN to arrayOf("返回"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_CURSOR_DIRECTION to arrayOf("清除"),
     )
 
     val strokeKeyPreset: Map<Int, Array<String>> = hashMapOf(
@@ -244,14 +244,14 @@ object KeyPreset {
         KeyEvent.KEYCODE_APOSTROPHE to arrayOf("分词", "7"),
         KeyEvent.KEYCODE_MINUS to arrayOf("-", "8"),
         KeyEvent.KEYCODE_EQUALS to arrayOf("=", "9"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_STAR_17 to arrayOf("*", "6"),
+        InputModeSwitcher.USER_KEYCODE_STAR to arrayOf("*", "6"),
         KeyEvent.KEYCODE_CLEAR to arrayOf("重输"),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格", "0"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf("，"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf("，", "7"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("。", "9"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf("，"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf("，", "7"),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("。", "9"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
         KeyEvent.KEYCODE_AT to arrayOf("@"),
     )
 
@@ -268,14 +268,14 @@ object KeyPreset {
         KeyEvent.KEYCODE_9 to arrayOf("9"),
         KeyEvent.KEYCODE_AT  to arrayOf("@"),
         KeyEvent.KEYCODE_PERIOD to arrayOf("."),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_8 to  arrayOf(","),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_COMMA_13 to arrayOf(","),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_LEFT_PERIOD_14 to arrayOf("."),
+        InputModeSwitcher.USER_KEYCODE_COMMA_EMOJI to  arrayOf(","),
+        InputModeSwitcher.USER_KEYCODE_LEFT_COMMA to arrayOf(","),
+        InputModeSwitcher.USER_KEYCODE_LEFT_PERIOD to arrayOf("."),
         KeyEvent.KEYCODE_SPACE to arrayOf("空格"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SYMBOL_3 to arrayOf("符号"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_NUMBER_5 to arrayOf("123"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_RETURN_6 to arrayOf("返回"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_EMOJI_4 to arrayOf("表情"),
+        InputModeSwitcher.USER_KEYCODE_SYMBOL to arrayOf("符号"),
+        InputModeSwitcher.USER_KEYCODE_NUMBER to arrayOf("123"),
+        InputModeSwitcher.USER_KEYCODE_RETURN to arrayOf("返回"),
+        InputModeSwitcher.USER_KEYCODE_EMOJI to arrayOf("表情"),
     )
 
     val textEditKeyPreset: Map<Int, Array<String>> = hashMapOf(
@@ -283,20 +283,20 @@ object KeyPreset {
         KeyEvent.KEYCODE_DPAD_UP to arrayOf("上移"),
         KeyEvent.KEYCODE_DPAD_RIGHT to arrayOf("右移"),
         KeyEvent.KEYCODE_DPAD_DOWN to arrayOf("下移"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_MOVE_START to arrayOf("开始"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_MOVE_END to arrayOf("结束"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_ALL to arrayOf("全选"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_MODE to arrayOf("选择"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_COPY to arrayOf("复制"),
-        InputModeSwitcherManager.USER_DEF_KEYCODE_PASTE to arrayOf("粘贴"),
+        InputModeSwitcher.USER_KEYCODE_MOVE_START to arrayOf("开始"),
+        InputModeSwitcher.USER_KEYCODE_MOVE_END to arrayOf("结束"),
+        InputModeSwitcher.USER_KEYCODE_SELECT_ALL to arrayOf("全选"),
+        InputModeSwitcher.USER_KEYCODE_SELECT_MODE to arrayOf("选择"),
+        InputModeSwitcher.USER_KEYCODE_COPY to arrayOf("复制"),
+        InputModeSwitcher.USER_KEYCODE_PASTE to arrayOf("粘贴"),
     )
 
     val textEditMenuPreset: Map<Int, Int> = hashMapOf(
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_ALL to android.R.id.selectAll,
-        InputModeSwitcherManager.USER_DEF_KEYCODE_SELECT_MODE to android.R.id.edit,
-        InputModeSwitcherManager.USER_DEF_KEYCODE_COPY to android.R.id.copy,
-        InputModeSwitcherManager.USER_DEF_KEYCODE_CUT to android.R.id.cut,
-        InputModeSwitcherManager.USER_DEF_KEYCODE_PASTE to android.R.id.paste,
+        InputModeSwitcher.USER_KEYCODE_SELECT_ALL to android.R.id.selectAll,
+        InputModeSwitcher.USER_KEYCODE_SELECT_MODE to android.R.id.edit,
+        InputModeSwitcher.USER_KEYCODE_COPY to android.R.id.copy,
+        InputModeSwitcher.USER_KEYCODE_CUT to android.R.id.cut,
+        InputModeSwitcher.USER_KEYCODE_PASTE to android.R.id.paste,
     )
 
 }

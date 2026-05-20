@@ -41,10 +41,10 @@ object RimeEngine {
     }
 
     /**
-     * 是否输入完毕，等待上屏。
+     * 是否输入完毕
      */
     fun isFinish(): Boolean {
-        return showCandidates.isEmpty() && showComposition.isBlank()
+        return keyRecordStack.isEmpty()
     }
 
     fun onNormalKey(event: KeyEvent) {

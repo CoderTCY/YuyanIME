@@ -406,7 +406,10 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 else commitDecInfoText(DecodingInfo.composingStrForCommit)
                 resetToIdleState()
             }
-            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> InputModeSwitcher.processShiftKey(keyCode)
+            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> {
+                if(InputModeSwitcher.isChinese && !DecodingInfo.isEngineFinish) processInput(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_APOSTROPHE, 0, 0, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))
+                else InputModeSwitcher.processShiftKey(keyCode)
+            }
         }
     }
 
@@ -449,6 +452,11 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 hasSelectionAll = !hasSelectionAll
                 if (!hasSelectionAll) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
                 else commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
+            }
+            else -> {
+                if(label.isNotEmpty()){
+                    if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
+                }
             }
         }
     }

@@ -15,6 +15,8 @@ class KeyRecordStack {
 
     fun clear() = keyRecords.clear()
 
+    fun isEmpty() = keyRecords.isEmpty()
+
     fun forEachReversed(action: (InputKey) -> Unit) {
         for (i in keyRecords.indices.reversed()) {
             action(keyRecords[i])

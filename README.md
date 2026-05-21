@@ -89,9 +89,9 @@ git clone git@github.com:gurecn/yuyansdk.git
 | - | - | - |
 | ![表情键盘](./images/emoji.jpg) | ![微信特效](./images/emoji_wechat.jpg) | ![数字行](./images/number_line.jpg) |
 
-| 深色主题 | 设置菜单 |
-| - | - |
-| ![深色主题](./images/dark.jpg) | ![设置菜单](./images/setting.jpg) |
+| 深色主题 | 设置菜单 | 物理键盘 |
+| - | - | - |
+| ![深色主题](./images/dark.jpg) | ![设置菜单](./images/setting.jpg) | ![物理键盘](./images/hardware_keyboard.jpg) |
 
 ## 授权声明
 [本项目(yuyansdk)](https://github.com/gurecn/yuyansdk)承诺，依据 [GPL-3.0 许可证](./LICENSE)条款**永久面向开源社区、个人用户免费、无广告开源，不获取输入数据**。为保障项目持续性，采用**双授权模式**：

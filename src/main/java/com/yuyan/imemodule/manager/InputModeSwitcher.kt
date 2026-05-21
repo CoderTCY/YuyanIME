@@ -6,6 +6,7 @@ import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
 import com.yuyan.imemodule.keyboard.KeyboardManager
 import com.yuyan.imemodule.keyboard.container.InputBaseContainer
+import com.yuyan.imemodule.utils.KeyboardLoaderUtil
 import com.yuyan.inputmethod.core.Kernel
 
 /**
@@ -255,6 +256,23 @@ object InputModeSwitcher {
             else -> MASK_CASE_LOWER
         }
         KeyboardManager.instance.switchKeyboard()
+    }
+
+    /**
+     * 通过应用内设置，切换输入法模式。
+     */
+    fun switchModeForSetting(value: Pair<Int, String>) {
+        val inputMode = value.first or MASK_LANGUAGE_CN
+        getInstance().internal.inputMethodPinyinMode.setValue(inputMode)
+        getInstance().internal.pinyinModeRime.setValue(value.second)
+        KeyboardLoaderUtil.instance.clearKeyboardMap()
+        KeyboardManager.instance.clearKeyboard()
+        saveInputMode(inputMode)
+        mToggleStates.modifiers = when(Kernel.getCurrentRimeSchema()) {
+            CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
+            else -> MASK_CASE_LOWER
+        }
+        KeyboardManager.instance.switchKeyboard(skbImeLayout)
     }
 
     // 记录SHIFT点击时间，作为双击判断

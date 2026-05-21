@@ -19,9 +19,7 @@ import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.DoublePinyinSchemaMode
 import com.yuyan.imemodule.prefs.behavior.SkbMenuMode
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
-import com.yuyan.imemodule.utils.KeyboardLoaderUtil
 import com.yuyan.imemodule.keyboard.InputView
-import com.yuyan.imemodule.keyboard.KeyboardManager
 import com.yuyan.imemodule.manager.layout.CustomGridLayoutManager
 import splitties.dimensions.dp
 import java.util.Collections
@@ -190,41 +188,15 @@ class SettingsContainer(context: Context, inputView: InputView) : BaseContainer(
     }
 
     private fun onKeyboardMenuClick(data: SkbFunItem) {
-        val keyboardValue: Int
         val value = when (data.skbMenuMode) {
-            SkbMenuMode.Pinyin26Jian -> {
-                keyboardValue = 0x1000
-                CustomConstant.SCHEMA_ZH_QWERTY
-            }
-            SkbMenuMode.PinyinHandWriting -> {
-                keyboardValue = 0x3000
-                CustomConstant.SCHEMA_ZH_HANDWRITING
-            }
-            SkbMenuMode.PinyinLx17 -> {
-                keyboardValue = 0x6000
-                CustomConstant.SCHEMA_ZH_DOUBLE_LX17
-            }
-            SkbMenuMode.PinyinStroke -> {
-                keyboardValue = 0x7000
-                CustomConstant.SCHEMA_ZH_STROKE
-            }
-            SkbMenuMode.Pinyin26Double -> {
-                keyboardValue = 0x1000
-                CustomConstant.SCHEMA_ZH_DOUBLE_FLYPY + AppPrefs.getInstance().input.doublePYSchemaMode.getValue()
-            }
-            else ->{
-                keyboardValue = 0x2000
-                CustomConstant.SCHEMA_ZH_T9
-            }
+            SkbMenuMode.Pinyin26Jian -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_QWERTY_PINYIN, CustomConstant.SCHEMA_ZH_QWERTY)
+            SkbMenuMode.PinyinHandWriting -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_HANDWRITING, CustomConstant.SCHEMA_ZH_HANDWRITING)
+            SkbMenuMode.PinyinLx17 -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_LX17, CustomConstant.SCHEMA_ZH_DOUBLE_LX17)
+            SkbMenuMode.PinyinStroke -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_STROKE, CustomConstant.SCHEMA_ZH_STROKE)
+            SkbMenuMode.Pinyin26Double -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_QWERTY_PINYIN, CustomConstant.SCHEMA_ZH_DOUBLE_FLYPY + AppPrefs.getInstance().input.doublePYSchemaMode.getValue())
+            else -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_T9_PINYIN, CustomConstant.SCHEMA_ZH_T9)
         }
-        val inputMode = keyboardValue or InputModeSwitcher.MASK_LANGUAGE_CN
-        AppPrefs.getInstance().internal.inputMethodPinyinMode.setValue(inputMode)
-        AppPrefs.getInstance().internal.pinyinModeRime.setValue(value)
-        // 双拼辅助功能,需刷新键盘
-        KeyboardLoaderUtil.instance.clearKeyboardMap()
-        KeyboardManager.instance.clearKeyboard()
-        InputModeSwitcher.saveInputMode(inputMode)
+        InputModeSwitcher.switchModeForSetting(value)
         inputView.resetToIdleState()
-        KeyboardManager.instance.switchKeyboard(InputModeSwitcher.skbImeLayout)
     }
 }

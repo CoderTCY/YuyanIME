@@ -45,7 +45,7 @@ object Kernel {
     // 执行选择动作，选择了index指向的词语
     fun getWordSelectedWord(index: Int) {
         if (DecodingInfo.isAssociate) RimeEngine.selectAssociation(index)
-        else RimeEngine.selectCandidate(index)
+        else if(!isFinish)RimeEngine.selectCandidate(index)
     }
 
     // 最上端拼音行

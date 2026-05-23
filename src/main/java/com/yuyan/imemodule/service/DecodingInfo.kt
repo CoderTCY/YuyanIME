@@ -14,18 +14,14 @@ object DecodingInfo {
     var activeCandidateBar = 0  //当前显示候选词位置
     // 候选词列表
     val candidatesLiveData = MutableLiveData<List<CandidateListItem>>()
-
     // 是否是联想词
     var isAssociate = false
-    // 是否重置
-    private var isReset = false
 
     /**
      * 重置
      */
     fun reset() {
         isAssociate = false
-        isReset = true
         activeCandidate = 0
         activeCandidateBar = 0
         candidatesLiveData.value = emptyList()
@@ -45,13 +41,8 @@ object DecodingInfo {
         // 候选词列表是否为空
         get() = candidatesLiveData.value?:emptyList()
 
-    fun getCurrentRimeSchema(): String {
-        return Kernel.getCurrentRimeSchema()
-    }
-
     // 增加拼写字符
     fun inputAction(event: KeyEvent) {
-        isReset = false
         activeCandidate = 0
         activeCandidateBar = 0
         Kernel.inputKeyCode(event)
@@ -142,7 +133,6 @@ object DecodingInfo {
     fun cacheCandidates(words: Array<CandidateListItem>) {
         activeCandidate = 0
         activeCandidateBar = 0
-        isReset = false
         candidatesLiveData.value = words.asList()
     }
 

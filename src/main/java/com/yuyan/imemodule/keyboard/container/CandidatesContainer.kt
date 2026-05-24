@@ -150,7 +150,7 @@ class CandidatesContainer(context: Context, inputView: InputView) : BaseContaine
                 MotionEvent.ACTION_MOVE -> { }
                 MotionEvent.ACTION_UP -> {
                     inputView.responseKeyEvent(SoftKey(KeyEvent.KEYCODE_DEL))
-                    if(DecodingInfo.isFinish) {
+                    if(DecodingInfo.isCandidatesEmpty) {
                         KeyboardManager.instance.switchKeyboard()
                         (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
                     }
@@ -169,7 +169,7 @@ class CandidatesContainer(context: Context, inputView: InputView) : BaseContaine
      * 显示候选词界面 , 点击候选词时执行
      */
     fun showCandidatesView() {
-        if (DecodingInfo.isCandidatesListEmpty || DecodingInfo.isAssociate){
+        if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate){
             mRVSymbolsView.removeAllViews()
         } else {
             if(DecodingInfo.activeCandidate == 0){

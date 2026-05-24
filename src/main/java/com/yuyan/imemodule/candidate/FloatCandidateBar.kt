@@ -100,7 +100,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
      */
     fun showCandidates() {
         mComposingView.text = DecodingInfo.composingStrForDisplay
-        if (DecodingInfo.isCandidatesListEmpty) {
+        if (DecodingInfo.isCandidatesEmpty) {
             this.visibility = GONE
         } else {
             if (DecodingInfo.candidateSize > DecodingInfo.activeCandidateBar) mRVCandidates.layoutManager?.scrollToPosition(DecodingInfo.activeCandidateBar)
@@ -115,7 +115,7 @@ class FloatCandidateBar(context: Context?, attrs: AttributeSet?) : RelativeLayou
      * 更新激活的候选词
      */
     fun updateActiveCandidateNo(keyCode: Int) {
-        if (!DecodingInfo.isCandidatesListEmpty) {
+        if (!DecodingInfo.isCandidatesEmpty) {
             when(keyCode){
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if(--activeCandNo <= 0) activeCandNo = 0

@@ -28,13 +28,13 @@ object DecodingInfo {
         Kernel.reset()
     }
 
-    val isCandidatesListEmpty: Boolean
+    val isCandidatesEmpty: Boolean
         // 候选词列表是否为空
         get() = candidatesLiveData.value.isNullOrEmpty()
 
     val candidateSize: Int
         // 候选词列表是否为空
-        get() = if(isCandidatesListEmpty) 0 else candidatesLiveData.value!!.size
+        get() = if(isCandidatesEmpty) 0 else candidatesLiveData.value!!.size
 
 
     val candidates: List<CandidateListItem>
@@ -68,15 +68,10 @@ object DecodingInfo {
     fun deleteAction() {
         activeCandidate = 0
         activeCandidateBar = 0
-        if (isEngineFinish || isAssociate) {
-            reset()
-        } else {
-            Kernel.deleteAction()
-        }
+        if(!isEngineFinish)Kernel.deleteAction()
+        else reset()
     }
 
-    val isFinish: Boolean
-        get() = isEngineFinish && isCandidatesListEmpty
 
     val isEngineFinish: Boolean
         get() = Kernel.isFinish
@@ -103,14 +98,19 @@ object DecodingInfo {
     fun chooseDecodingCandidate(candId: Int): String {
         activeCandidate = 0
         activeCandidateBar = 0
-        if (candId >= 0) Kernel.getWordSelectedWord(candId)
-        val newCandidates = Kernel.candidates
-        return if(newCandidates.isNotEmpty()){
+        var candidate: String
+        if(!isEngineFinish) {
+            if (candId >= 0) Kernel.getWordSelectedWord(candId)
+            val newCandidates = Kernel.candidates
+            candidate = if (newCandidates.isNotEmpty()) Kernel.commitText
+            else if (candId in 0..<candidateSize) Kernel.commitText.ifEmpty { candidatesLiveData.value!![candId].text }
+            else ""
             candidatesLiveData.value = newCandidates
-            Kernel.commitText
-        } else if(candId in 0..<candidateSize){
-            Kernel.commitText.ifEmpty { candidatesLiveData.value!![candId].text }
-        } else ""
+        } else {
+            candidate = if (candId in 0..<candidateSize) Kernel.commitText.ifEmpty { candidatesLiveData.value!![candId].text } else ""
+            reset()
+        }
+        return candidate
     }
 
     /**

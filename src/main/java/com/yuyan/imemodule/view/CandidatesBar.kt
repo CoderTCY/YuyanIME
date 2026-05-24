@@ -261,7 +261,7 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
             } else {
                 listOf(menuSkbFunsPreset[SkbMenuMode.AddPhrases]!!, menuSkbFunsPreset[SkbMenuMode.ClipBoard]!!, menuSkbFunsPreset[SkbMenuMode.Phrases]!!, menuSkbFunsPreset[SkbMenuMode.LockClipBoard]!!)
             }
-        } else if (DecodingInfo.isCandidatesListEmpty) {
+        } else if (DecodingInfo.isCandidatesEmpty) {
             mRightArrowBtn.drawable.setLevel(0)
             showViewVisibility(mCandidatesMenuContainer)
             val mFunItems: MutableList<SkbFunItem> = mutableListOf()
@@ -301,7 +301,7 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
      * 更新激活的候选词
      */
     fun updateActiveCandidateNo(keyCode: Int) {
-        if (!DecodingInfo.isCandidatesListEmpty) {
+        if (!DecodingInfo.isCandidatesEmpty) {
             when(keyCode){
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if(--activeCandNo <= 0) activeCandNo = 0

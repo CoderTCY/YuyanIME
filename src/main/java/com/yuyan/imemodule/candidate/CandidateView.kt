@@ -122,7 +122,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     private fun processFunctionKeys(event: KeyEvent): Boolean {
         return when (val keyCode = event.keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
-                if (DecodingInfo.isFinish || (DecodingInfo.isAssociate && !mSkbCandidatesBarView.isActiveCand())) {
+                if (DecodingInfo.isCandidatesEmpty || (DecodingInfo.isAssociate && !mSkbCandidatesBarView.isActiveCand())) {
                     sendKeyEvent(keyCode)
                     resetToIdleState()
                 } else {
@@ -140,13 +140,13 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 true
             }
             KeyEvent.KEYCODE_ENTER -> {
-                if (DecodingInfo.isFinish || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
+                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
                 else commitDecInfoText(DecodingInfo.composingStrForCommit)
                 resetToIdleState()
                 true
             }
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (!DecodingInfo.isCandidatesListEmpty) {
+                if (!DecodingInfo.isCandidatesEmpty) {
                     mSkbCandidatesBarView.updateActiveCandidateNo(keyCode)
                 } else {
                     sendKeyEvent(keyCode)
@@ -163,7 +163,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         val label = keyChar.toChar().toString()
         return when {
             keyCode == KeyEvent.KEYCODE_DEL -> {
-                if (DecodingInfo.isFinish || DecodingInfo.isAssociate) {
+                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
                     sendKeyEvent(keyCode)
                 } else {
                     DecodingInfo.deleteAction()
@@ -181,7 +181,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 true
             }
             else -> {
-                if (!DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
+                if (!DecodingInfo.isCandidatesEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
                 false
             }
         }
@@ -193,7 +193,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     fun chooseAndUpdate(candId: Int = mSkbCandidatesBarView.getActiveCandNo()) {
         val choice = DecodingInfo.chooseDecodingCandidate(candId)
-        if (DecodingInfo.isEngineFinish || DecodingInfo.isAssociate) {
+        if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
             commitDecInfoText(choice)
             resetToIdleState()
         }
@@ -201,9 +201,7 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     private fun updateCandidate() {
         DecodingInfo.updateDecodingCandidate()
-        if (DecodingInfo.isFinish) {
-            resetToIdleState()
-        }
+        if (DecodingInfo.isCandidatesEmpty) resetToIdleState()
     }
 
     inner class ChoiceNotifier internal constructor() : CandidateViewListener {

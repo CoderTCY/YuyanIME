@@ -276,7 +276,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     override fun responseLongKeyEvent(result: Pair<PopupMenuMode, String>) {
         val (mode, value) = result
-        if (mode != PopupMenuMode.None && !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty) {
+        if (mode != PopupMenuMode.None && !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesEmpty) {
             if (InputModeSwitcher.isChinese || InputModeSwitcher.isEnglish) chooseAndUpdate()
         }
 
@@ -386,23 +386,25 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     fun isFunctionKey(keyCode: Int): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_CLEAR,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_SHIFT_LEFT,
-            KeyEvent.KEYCODE_SHIFT_RIGHT,
-            KeyEvent.KEYCODE_LANGUAGE_SWITCH,
-            KeyEvent.KEYCODE_SYM,
-            KeyEvent.KEYCODE_PICTSYMBOLS,
-            KeyEvent.KEYCODE_NUM -> return true
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_CLEAR, KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT, KeyEvent.KEYCODE_LANGUAGE_SWITCH, KeyEvent.KEYCODE_SYM,
+            KeyEvent.KEYCODE_PICTSYMBOLS, KeyEvent.KEYCODE_NUM -> return true
         }
         return false
     }
 
     private fun processFunctionKey(event: KeyEvent) {
         when (val keyCode = event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
+                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
+                    sendKeyEvent(keyCode)
+                    resetToIdleState()
+                }
+                else chooseAndUpdate()
+            }
             KeyEvent.KEYCODE_CLEAR -> resetToIdleState()
             KeyEvent.KEYCODE_ENTER -> {
-                if (DecodingInfo.isFinish || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
+                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
                 else commitDecInfoText(DecodingInfo.composingStrForCommit)
                 resetToIdleState()
             }
@@ -420,7 +422,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 resetToIdleState()
                 return
             }
-            !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesListEmpty -> {
+            !DecodingInfo.isAssociate && !DecodingInfo.isCandidatesEmpty -> {
                 if (InputModeSwitcher.isChinese || InputModeSwitcher.isEnglish) chooseAndUpdate()
             }
         }
@@ -468,7 +470,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
         return when {
             keyCode == KeyEvent.KEYCODE_DEL -> {
-                if (DecodingInfo.isFinish || DecodingInfo.isAssociate) {
+                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
                     service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
                     sendKeyEvent(keyCode)
                 } else {
@@ -484,13 +486,13 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 true
             }
             keyCode != 0 -> {
-                if (!DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
+                if (!DecodingInfo.isCandidatesEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
                 sendKeyEvent(keyCode)
                 resetToIdleState()
                 true
             }
             label.isNotEmpty() -> {
-                if (!DecodingInfo.isCandidatesListEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
+                if (!DecodingInfo.isCandidatesEmpty && !DecodingInfo.isAssociate) chooseAndUpdate()
                 if (SymbolPreset.containsKey(label)) commitPairSymbol(label) else commitText(label)
                 true
             }
@@ -509,12 +511,12 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             commitDecInfoText(candidate.text)
         } else {
             val choice = DecodingInfo.chooseDecodingCandidate(candId)
-            if (DecodingInfo.isEngineFinish || DecodingInfo.isAssociate) {
+            if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
                 KeyboardManager.instance.switchKeyboard()
                 (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
                 commitDecInfoText(choice)
             } else {
-                if (!DecodingInfo.isFinish) {
+                if (!DecodingInfo.isCandidatesEmpty) {
                     (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
                     if (InputModeSwitcher.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
                 } else {
@@ -526,7 +528,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     private fun updateCandidate() {
         DecodingInfo.updateDecodingCandidate()
-        if (!DecodingInfo.isFinish) {
+        if (!DecodingInfo.isCandidatesEmpty) {
             (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
         } else {
             resetToIdleState()

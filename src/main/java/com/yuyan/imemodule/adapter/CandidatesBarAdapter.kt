@@ -36,7 +36,7 @@ class CandidatesBarAdapter(context: Context?) :
     }
 
     override fun onBindViewHolder(holder: SymbolHolder, position: Int) {
-        if(DecodingInfo.isCandidatesListEmpty) return
+        if(DecodingInfo.isCandidatesEmpty) return
         holder.textView.text = DecodingInfo.candidates[position].text
         holder.textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, instance.candidateTextSize)
         holder.textView.setTextColor(if(mActiveCandNo-1 == position) activeTheme.accentKeyBackgroundColor else activeTheme.keyTextColor)

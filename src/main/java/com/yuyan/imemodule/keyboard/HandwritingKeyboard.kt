@@ -86,8 +86,7 @@ class HandwritingKeyboard(context: Context?) : TextKeyboard(context) {
                 mPoints.clear()
                 addPoint(getNewPoint(eventX, eventY))
                 if (mLastUpTime != 0L && System.currentTimeMillis() - mLastUpTime > times) {
-                    val key = SoftKey()
-                    mService!!.responseKeyEvent(key)
+                    mService!!.chooseAndUpdate(0)
                     mSBPoint.clear()
                     clear()
                 }

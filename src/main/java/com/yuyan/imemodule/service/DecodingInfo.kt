@@ -140,6 +140,7 @@ object DecodingInfo {
      * 根据输入的字符查询候选词
      */
     fun getAssociateWord(words: String) {
+        isAssociate = true
         Kernel.getAssociateWord(words)
     }
 }

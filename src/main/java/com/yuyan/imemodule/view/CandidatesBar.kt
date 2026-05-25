@@ -36,6 +36,10 @@ import com.yuyan.imemodule.keyboard.container.CandidatesContainer
 import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
 import com.yuyan.imemodule.keyboard.container.InputBaseContainer
 import com.yuyan.imemodule.manager.layout.CustomLinearLayoutManager
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import splitties.dimensions.dp
 
 /**
@@ -244,6 +248,24 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
             popupMenu.show()
         } else {
             mCvListener.onClickMenu(skbMenuMode)
+        }
+    }
+
+    // 增加窗口防抖机制
+    private var pendingMenuJob: Job? = null
+    private val serviceScope = MainScope()
+    fun scheduleShowCandidates() {
+        if (!DecodingInfo.isCandidatesEmpty) {
+            pendingMenuJob?.cancel()
+            pendingMenuJob = null
+            showCandidates()
+            return
+        }
+        if (pendingMenuJob?.isActive == true) return
+        pendingMenuJob = serviceScope.launch {
+            delay(100)
+            showCandidates()
+            pendingMenuJob = null
         }
     }
 

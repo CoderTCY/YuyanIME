@@ -533,7 +533,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         if (InputModeSwitcher.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
     }
 
-    fun updateCandidateBar() = mSkbCandidatesBarView.showCandidates()
+    fun updateCandidateBar() = mSkbCandidatesBarView.scheduleShowCandidates()
 
     private fun resetCandidateWindow() {
         DecodingInfo.reset()

@@ -80,7 +80,7 @@ class HandwritingContainer(context: Context?, inputView: InputView) : InputBaseC
     }
 
     // 更新键盘上侧边符号列表
-    protected fun updateKeyboardView() {
+    private fun updateKeyboardView() {
         mRVRightSymbols.setLayoutManager(LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false))
         if (mRVRightSymbols.parent != null) {
             val parent = mRVRightSymbols.parent as ViewGroup

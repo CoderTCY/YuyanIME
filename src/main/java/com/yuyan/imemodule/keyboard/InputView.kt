@@ -312,6 +312,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         val keyCode = sKey.code
         if(sKey.isUserDefKey)processUserDefKey(keyCode, sKey.keyLabel)
         else if(sKey.isUniStrKey){
+            if (!DecodingInfo.isAssociate && !DecodingInfo.isCandidatesEmpty) chooseAndUpdate()
             sKey.label.takeIf(String::isNotEmpty)?.let {
                 if (SymbolPreset.containsKey(it)) commitPairSymbol(it) else commitText(it)
             }
@@ -326,16 +327,12 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
 
     fun processKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        // 字母、数字、符号、空格
         if (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z) return true
-        if (keyCode == KeyEvent.KEYCODE_SPACE) return true
-        if (keyCode == KeyEvent.KEYCODE_APOSTROPHE) return true
-        // 编辑键
-        if (keyCode == KeyEvent.KEYCODE_DEL) return true
-        if (keyCode == KeyEvent.KEYCODE_ENTER) return true
-        if (keyCode == KeyEvent.KEYCODE_BACK) return true
-        // 方向键
-        if (keyCode >= KeyEvent.KEYCODE_DPAD_UP && keyCode <= KeyEvent.KEYCODE_DPAD_RIGHT) return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_APOSTROPHE, KeyEvent.KEYCODE_SPACE,
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_BACK -> return true
+        }
         return false
     }
 

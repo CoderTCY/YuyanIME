@@ -193,7 +193,11 @@ open class TextKeyboard(context: Context?) : BaseKeyboardView(context){
                 bg.setBounds(softKey.mLeft + keyMarginX, softKey.mTop + keyMarginY, softKey.mRight - keyMarginX, softKey.mBottom - keyMarginY)
                 bg.draw(canvas)
         }
-        var keyLabel = if(InputModeSwitcher.isLower) softKey.keyLabel.lowercase() else softKey.keyLabel
+        var keyLabel = if(skbStyleMode == SkbStyleMode.Google){
+            if(InputModeSwitcher.isLower) softKey.keyLabel.lowercase() else softKey.keyLabel
+        } else {
+            if(InputModeSwitcher.isLower && InputModeSwitcher.isEnglish) softKey.keyLabel.lowercase() else softKey.keyLabel
+        }
         val keyLabelSmall = softKey.getmKeyLabelSmall()
         val keyMnemonic = softKey.keyMnemonic
         var keyIcon = if(skbStyleMode == SkbStyleMode.Google && softKey.code == KeyEvent.KEYCODE_SPACE) null

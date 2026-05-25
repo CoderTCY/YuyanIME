@@ -740,21 +740,19 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             return
         }
         if (oldSelStart == newSelStart) return
-        val textBeforeCursor = service.getTextBeforeCursor(100)
-        if (textBeforeCursor.isBlank()) {
-            resetToIdleState()
-            return
-        }
         when {
             InputModeSwitcher.isNumberSkb -> {
-                CustomEngine.parseExpressionAtEnd(textBeforeCursor).let {
-                    CustomEngine.expressionCalculator(textBeforeCursor, it).let(::showSymbols)
-                }
+                val textBeforeCursor = service.getTextBeforeCursor(500)
+                if (textBeforeCursor.isBlank()) resetCandidateWindow()
+                else CustomEngine.parseExpressionAtEnd(textBeforeCursor).let { CustomEngine.expressionCalculator(textBeforeCursor, it).let(::showSymbols) }
             }
-            chinesePrediction && InputModeSwitcher.isChinese && StringUtils.isChineseEnd(textBeforeCursor) -> {
-                DecodingInfo.isAssociate = true
-                DecodingInfo.getAssociateWord(textBeforeCursor.takeLast(10))
-                updateCandidate()
+            chinesePrediction && InputModeSwitcher.isChinese-> {
+                val textBeforeCursor = service.getTextBeforeCursor(10)
+                if (textBeforeCursor.isBlank()) resetCandidateWindow()
+                else {
+                    DecodingInfo.getAssociateWord(textBeforeCursor)
+                    updateCandidate()
+                }
             }
             else -> resetCandidateWindow()
         }

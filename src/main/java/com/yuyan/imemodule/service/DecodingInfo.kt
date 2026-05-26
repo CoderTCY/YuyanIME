@@ -99,15 +99,15 @@ object DecodingInfo {
         activeCandidate = 0
         activeCandidateBar = 0
         var candidate: String
-        if(!isEngineFinish) {
+        if(!isEngineFinish || isAssociate) { // Rime和联想
             if (candId >= 0) Kernel.getWordSelectedWord(candId)
             val newCandidates = Kernel.candidates
             candidate = if (newCandidates.isNotEmpty()) Kernel.commitText
             else if (candId in 0..<candidateSize) Kernel.commitText.ifEmpty { candidatesLiveData.value!![candId].text }
             else ""
             candidatesLiveData.value = newCandidates
-        } else {
-            candidate = if (candId in 0..<candidateSize) Kernel.commitText.ifEmpty { candidatesLiveData.value!![candId].text } else ""
+        } else {  // 手写
+            candidate = if (candId in 0..<candidateSize) candidatesLiveData.value!![candId].text  else ""
             reset()
         }
         return candidate

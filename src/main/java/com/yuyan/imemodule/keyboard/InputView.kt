@@ -304,7 +304,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     override fun responseHandwritingResultEvent(words: Array<CandidateListItem>) {
-        DecodingInfo.isAssociate = false
         DecodingInfo.cacheCandidates(words)
     }
 
@@ -595,8 +594,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     fun showSymbols(symbols: Array<String>) {
         val list = symbols.map { CandidateListItem("📋", it) }.toTypedArray()
-        DecodingInfo.cacheCandidates(list)
-        DecodingInfo.isAssociate = true
+        DecodingInfo.cacheCandidates(list, true)
     }
 
     fun requestHideSelf() = service.requestHideSelf(0)

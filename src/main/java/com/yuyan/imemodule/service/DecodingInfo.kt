@@ -130,7 +130,8 @@ object DecodingInfo {
     }
 
     // 更新候选词
-    fun cacheCandidates(words: Array<CandidateListItem>) {
+    fun cacheCandidates(words: Array<CandidateListItem>, associate: Boolean = false) {
+        isAssociate = associate
         activeCandidate = 0
         activeCandidateBar = 0
         candidatesLiveData.value = words.asList()

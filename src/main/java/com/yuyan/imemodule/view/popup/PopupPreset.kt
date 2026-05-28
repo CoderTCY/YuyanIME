@@ -87,6 +87,15 @@ val PopupPreset: Map<String, Array<String>> = hashMapOf(
     "TUV" to arrayOf("U", "T", "V", "⁸", "u", "t", "v"),
     "WXYZ" to arrayOf("Z", "Y", "X", "W", "⁹", "z", "y", "x", "w"),
 
+    "abc" to arrayOf("B", "A", "C", "²", "b", "a", "c"),
+    "def" to arrayOf("F", "E", "D", "³", "f", "e", "d"),
+    "ghi" to arrayOf("H", "G", "I", "⁴", "h", "g", "i"),
+    "jkl" to arrayOf("K", "J", "L", "⁵", "k", "j", "l"),
+    "mno" to arrayOf("O", "N", "M", "⁶", "o", "n", "m"),
+    "pqrs" to arrayOf("Q", "P", "R", "S", "⁷", "q", "p", "r", "s"),
+    "tuv" to arrayOf("U", "T", "V", "⁸", "u", "t", "v"),
+    "wxyz" to arrayOf("Z", "Y", "X", "W", "⁹", "z", "y", "x", "w"),
+
     //
     // LX17
     //

@@ -13,6 +13,10 @@ import com.yuyan.inputmethod.core.Kernel
  * 输入法模式转换器。设置输入法的软键盘。
  */
 object InputModeSwitcher {
+    /**
+     * User defined key code, used by soft keyboard. 选择候选词按键。
+     */
+    const val USER_KEYCODE_SELECTED = -1
 
     /**
      * User defined key code, used by soft keyboard. 语言键的code,语言切换键。

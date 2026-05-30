@@ -436,10 +436,10 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 if (hasSelection) {
                     val start = selStart
                     commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcher.USER_KEYCODE_SELECT_ALL])
-                    postDelayed(50) { service.setSelection(start, selEnd) }
+                    postDelayed(100) { service.setSelection(start, selEnd) }
                 } else {
                     commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcher.USER_KEYCODE_SELECT_ALL])
-                    service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+                    postDelayed(100) { service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)}
                 }
             }
             InputModeSwitcher.USER_KEYCODE_SELECT_MODE -> {

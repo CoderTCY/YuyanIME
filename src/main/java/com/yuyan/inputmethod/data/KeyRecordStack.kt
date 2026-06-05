@@ -84,11 +84,15 @@ class KeyRecordStack {
         repeat(keys.size) {
             keyRecords.removeAt(index)
         }
+        var posInInput = 0
+        keyRecords.forEach {
+            if(it is InputKey.SelectPinyinAction) posInInput += 1
+        }
         keyRecords.add(InputKey.SelectPinyinAction)
         keyRecords.add(index, InputKey.PinyinKey(pinyin))
-        val posInInput = keyRecords.subList(0, index).fold(0) { acc, inputKey ->
+        posInInput = keyRecords.subList(0, index).fold(0) { acc, inputKey ->
             acc + when (inputKey) {
-                is InputKey.T9Key -> 1
+                is InputKey.T9Key, is InputKey.Apostrophe -> 1
                 is InputKey.PinyinKey -> inputKey.inputKeyLength
                 else -> 0
             }

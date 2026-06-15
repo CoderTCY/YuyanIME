@@ -93,22 +93,65 @@ git clone git@github.com:gurecn/yuyansdk.git
 | - | - | - |
 | ![深色主题](./images/dark.jpg) | ![设置菜单](./images/setting.jpg) | ![物理键盘](./images/hardware_keyboard.jpg) |
 
-## 授权声明
-[本项目(yuyansdk)](https://github.com/gurecn/yuyansdk)承诺，依据 [GPL-3.0 许可证](./LICENSE)条款**永久面向开源社区、个人用户免费、无广告开源，不获取输入数据**。为保障项目持续性，采用**双授权模式**：
-* **GNU General Public License v3.0 (GPL-3.0):**
-  *  依据 [GPL-3.0 许可证](./LICENSE)条款向社区开源及个人研究、使用。
-  *  在遵守 GPL-3.0 许可证全部条款（包括不限于：开源修改后的代码、注明版权等）的前提下，自由地使用、研究、修改本项目的源代码；
-  *   分发本项目的原始或修改后的版本（需遵守 [GPL-3.0 许可证](./LICENSE)）；
-  *   **重要提示：** 若您将本项目的代码（或其修改版本）集成到您自己的项目中，则您的整个项目**必须**依据 GPL-3.0 许可证约定的义务开源。
-* **商业授权 (Commercial License):**
-  *   若您有以下一项或多项需求，您需要购买商业授权：
-      * 将本项目（或其部分）集成到您的**专有/闭源软件**中；
-      * 您需要在企业内部或商业推广使用的同时**不希望/无法遵守 GPL-3.0 的开源义务**
-      * 您需要**技术支持或定制开发服务**。
-  *   商业授权提供更灵活的使用条款，免除 GPL-3.0 的开源要求、提供法律保障和技术支持；
-  *   专属技术支持或定制开发服务。 
+## 许可证与商业授权声明
+本项目 [yuyansdk](https://github.com/gurecn/yuyansdk) 承诺，依据 [BSD-3-Clause license 许可证](./LICENSE) 条款**永久面向开源社区、个人用户免费开放使用，不上传输入数据**。为保障项目持续性，采用**双授权模式**：
+### 一、开源代码授权（BSD 3-Clause）
+您在遵守 BSD 3-Clause License 全部条款的前提下，可以自由地：
+- 使用、研究本仓库中的公开源代码；
+- 修改本仓库中的公开源代码；
+- 分发本仓库公开源代码的原始或修改后的版本（需保留上述版权声明和免责声明）。
+- **特别说明：** 根据 BSD 3-Clause 协议，您可以将这些公开源代码集成到您的任何项目（包括闭源商业项目）中，**无需**公开您的项目源码。
+### 二、预编译闭源库（libyuyanime.so）的技术限制与商业授权
+本项目分发的预编译闭源动态库 **不适用 BSD 3-Clause 协议**，其使用受以下条件及商业授权约束：
+在您使用我们提供的**预编译二进制文件（.so）** 时，需遵守以下技术使用条款：
+#### 未获得商业授权
+- 您可以将 SDK 集成到您的应用中进行调试、测试或试用。
+- **注意事项：**预编译库内置技术保护措施。集成时**不得擅自修改或更换应用的包名（Package Name）**，否则将导致核心验证失败，输入功能无法正常初始化或运行。
+#### 获得商业授权
+- 我们将为您指定的应用包名提供专属预编译库文件，**解除试用期及包名绑定的技术限制**，确保您的应用长期、稳定运行。
+### 三、重要澄清
+上述技术限制**仅针对我们分发的预编译闭源库文件**。  
+**特别说明**：本仓库公开的源代码为上层调用框架及接口层代码，**不包含**我们对 librime 核心库的优化及修改源码。如果您希望构建一个不受包名限制的核心库，您有以下合法途径：
+1. 依据 BSD 3-Clause 协议，自行获取并修改上游 [librime](https://github.com/rime/librime) 的原始代码，独立实现您所需的功能优化；
+2. 联系我们获取商业授权版本，以获得无技术限制的预编译库。
+### 四、上游版权声明
+本 SDK 包含来自开源项目 [librime](https://github.com/rime/librime) 的修改代码。librime 遵循 **BSD 3-Clause License**。（点击展开查看完整文本）：
 
-  感谢您对本项目的支持。
+<details>
+<summary>📄 librime BSD 3-Clause 许可证原文</summary>
+
+Copyright (c) 2014, RIME Developers
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+* Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in
+  the documentation and/or other materials provided with the
+  distribution.
+
+* Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived
+  from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+</details>
 
 ## 联系作者：
 访问我的资源: <a href="https://github.com/gurecn">https://github.com/gurecn</a>

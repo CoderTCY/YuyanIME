@@ -222,4 +222,6 @@
     <string name="keyboard_style_mod_yuyan">默认</string>
     <string name="keyboard_style_mod_google">谷歌</string>
     <string name="keyboard_style_mod_samsung">三星</string>
+
+    <string name="show_virtual_keyboard_with_external">物理键盘显示软键盘（插拔键盘生效）</string>
 </resources>

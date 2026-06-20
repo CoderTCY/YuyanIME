@@ -49,6 +49,7 @@ import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.DevicesUtils
 import com.yuyan.imemodule.utils.InputMethodUtil
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil
+import com.yuyan.imemodule.utils.LogUtil
 import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.view.CandidatesBar
 import com.yuyan.imemodule.view.EditPhrasesView
@@ -91,6 +92,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     private val textBeforeCursors = StringQueue(50)
 
     init {
+        LogUtil.d("1111111111111", "InputView init")
         initNavbarBackground(service)
         InputModeSwitcher.reset()
         mSkbRoot = LayoutInflater.from(context).inflate(R.layout.sdk_skb_container, this, false) as RelativeLayout
@@ -118,6 +120,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     @SuppressLint("ClickableViewAccessibility")
     fun initView(context: Context) {
+        LogUtil.d("1111111111111", "InputView initView")
         if (isAddPhrases) {
             if (mAddPhrasesLayout.parent == null) {
                 addView(mAddPhrasesLayout, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
@@ -235,6 +238,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     fun updateTheme() {
+        LogUtil.d("1111111111111", "InputView updateTheme")
         setBackgroundResource(android.R.color.transparent)
         val activeTheme = ThemeManager.activeTheme
         val keyTextColor = activeTheme.keyTextColor

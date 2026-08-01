@@ -87,7 +87,7 @@ static void InitJniCache(JNIEnv* env) {
       env->GetMethodID(g_jni.Cls_RimeCommit, "<init>", "(Ljava/lang/String;)V");
   g_jni.Ctor_RimeStatus = env->GetMethodID(
       g_jni.Cls_RimeStatus, "<init>",
-      "(Ljava/lang/String;Ljava/lang/String;ZZZZZZZZ)V");
+      "(Ljava/lang/String;Ljava/lang/String;ZZZZZZZ)V");
 }
 
 // Android KeyEvent metaState → X11 修饰位（librime key_table.h）

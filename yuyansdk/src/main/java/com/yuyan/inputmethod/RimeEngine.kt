@@ -72,8 +72,13 @@ object RimeEngine {
         return if (Rime.hasRight()) {
             Rime.processKey(getRimeKeycodeByName("Page_Down"), 0)
             val candidates = Rime.getRimeContext()!!.candidates
-            // 英文候选按输入形态筛选（筛选而非转换），并更新筛选后位置 → rime 原始索引的映射
-            val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates.asList(), getEchoComposition())
+            // 英文候选按输入形态筛选（筛选而非转换），并更新筛选后位置 → rime 原始索引的映射；
+            // 仅英文模式筛选（中文候选的汉字是字母，会被形态规则误滤）
+            val (filteredCandidates, indexMap) = if (InputModeSwitcher.isEnglish) {
+                filterEnglishCandidates(candidates.asList(), getEchoComposition())
+            } else {
+                candidates.asList() to emptyList()
+            }
             rimeCandidateIndexMap = indexMap
             filteredCandidates.toTypedArray()
         } else emptyArray()
@@ -181,8 +186,13 @@ object RimeEngine {
                     }
                 }
                 customPhraseSize = phrase.size
-                // 英文候选按输入形态筛选（筛选而非转换），并记录筛选后位置 → rime 原始索引的映射
-                val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates, echoComposition)
+                // 英文候选按输入形态筛选（筛选而非转换），并记录筛选后位置 → rime 原始索引的映射；
+                // 仅英文模式筛选——中文候选的汉字是字母，会被形态规则误滤（emoji/Ext-B 反因 surrogate 保留）
+                val (filteredCandidates, indexMap) = if (InputModeSwitcher.isEnglish) {
+                    filterEnglishCandidates(candidates, echoComposition)
+                } else {
+                    candidates to emptyList()
+                }
                 rimeCandidateIndexMap = indexMap
                 phrase.map { content -> CandidateListItem("📋", content) }.toMutableList().plus(filteredCandidates)
             }

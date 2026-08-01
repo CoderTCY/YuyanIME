@@ -69,12 +69,17 @@ function Strip-Schema {
   # 裁剪展开版 schema：删 lua/t9_processor/radical 引用、改 page_size、改名
   param([string]$File, [string]$NewId)
   $out = New-Object System.Collections.Generic.List[string]
+  $skipRadicalBlock = $false
   foreach ($line in (Get-Content $File)) {
     $t = $line.Trim()
     if ($t -match '^"?- "?lua_(processor|translator|filter)@') { continue }
     if ($t -eq "- t9_processor") { continue }
-    if ($t -match '^- "?(affix_segmentor@radical_lookup|reverse_lookup_filter@)') { continue }
+    if ($t -match '^- "?(affix_segmentor@radical_lookup|reverse_lookup_filter@|table_translator@radical_lookup)') { continue }
     if ($t -match '^(calculator|unicode|number|gregorian_to_lunar|radical_lookup): ') { continue }
+    if ($t -eq 'radical_lookup:' -or $t -eq 'radical_reverse_lookup:') { $skipRadicalBlock = $true; continue }
+    if ($skipRadicalBlock -and $t -eq 'recognizer:') { $skipRadicalBlock = $false }
+    if ($skipRadicalBlock) { continue }
+    if ($t -eq '- radical_pinyin') { continue }
     if ($t -match '^page_size: 5$') { $out.Add("  page_size: 100"); continue }
     if ($NewId -and $t -match '^schema_id: ') { $out.Add("  schema_id: $NewId"); continue }
     if ($NewId -and $t -match '^prism: ') { $out.Add("  prism: $NewId"); continue }

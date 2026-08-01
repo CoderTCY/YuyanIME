@@ -1,4 +1,4 @@
-﻿__build_info:
+__build_info:
   rime_version: 1.17.0
   timestamps:
     default: 1784480536
@@ -72,7 +72,7 @@ engine:
     - "table_translator@custom_phrase"
     - "table_translator@melt_eng"
     - "table_translator@cn_en"
-    - "table_translator@radical_lookup"
+
 key_binder:
   bindings:
     - {accept: "Shift+Tab", send: "Shift+Left", when: composing}
@@ -402,18 +402,6 @@ punctuator:
     Vzmh: ["⒜", "⒝", "⒞", "⒟", "⒠", "⒡", "⒢", "⒣", "⒤", "⒥", "⒦", "⒧", "⒨", "⒩", "⒪", "⒫", "⒬", "⒭", "⒮", "⒯", "⒰", "⒱", "⒲", "⒳", "⒴", "⒵"]
     Vzmq: ["ⓐ", "Ⓐ", "ⓑ", "Ⓑ", "ⓒ", "Ⓒ", "ⓓ", "Ⓓ", "ⓔ", "Ⓔ", "ⓕ", "Ⓕ", "ⓖ", "Ⓖ", "ⓗ", "Ⓗ", "ⓘ", "Ⓘ", "ⓙ", "Ⓙ", "ⓚ", "Ⓚ", "ⓛ", "Ⓛ", "ⓜ", "Ⓜ", "ⓝ", "Ⓝ", "ⓞ", "Ⓞ", "ⓟ", "Ⓟ", "ⓠ", "Ⓠ", "ⓡ", "Ⓡ", "ⓢ", "Ⓢ", "ⓣ", "Ⓣ", "ⓤ", "Ⓤ", "ⓥ", "Ⓥ", "ⓦ", "Ⓦ", "ⓧ", "Ⓧ", "ⓨ", "Ⓨ", "ⓩ", "Ⓩ"]
     Vzy: ["ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ", "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ", "ㄧ", "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ", "ㄢ", "ㄣ", "ㄤ", "ㄥ", "ㄦ", "ㄪ", "ㄫ", "ㄬ", "ㄭ", "ㆠ", "ㆡ", "ㆢ", "ㆣ", "ㆤ", "ㆥ", "ㆦ", "ㆧ", "ㆨ", "ㆩ", "ㆪ", "ㆫ", "ㆬ", "ㆭ", "ㆮ", "ㆯ", "ㆰ", "ㆱ", "ㆲ", "ㆳ", "ㆴ", "ㆵ", "ㆶ", "ㆷ"]
-radical_lookup:
-  comment_format:
-    - "erase/^.*$//"
-  dictionary: radical_pinyin
-  enable_user_dict: false
-  prefix: uU
-  tag: radical_lookup
-  tips: "  〔拆字〕"
-radical_reverse_lookup:
-  dictionary: rime_ice
-  tags:
-    - radical_lookup
 recognizer:
   import_preset: default
   patterns:
@@ -696,7 +684,6 @@ schema:
     - Dvel
   dependencies:
     - melt_eng
-    - radical_pinyin
   description: |
     雾凇拼音 - 智能 ABC 双拼
     https://github.com/iDvel/rime-ice

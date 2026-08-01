@@ -13,6 +13,7 @@ object CustomConstant {
     const val SCHEMA_EN = "english"         // 英语方案
     const val SCHEMA_ZH_HANDWRITING = "handwriting" // 手写输入
     const val SCHEMA_ZH_DOUBLE_FLYPY = "double_pinyin_" // 小鹤双拼
+    const val SCHEMA_ZH_DOUBLE_LX17 = "double_pinyin_ls17" // 乱序17双拼
     const val SCHEMA_ZH_STROKE = "stroke" // 五笔画
     const val CURRENT_RIME_DICT_DATA_VERSIOM = 20260802 // rime-ice 全量词库（810w）
     const val CURRENT_HW_DICT_DATA_VERSIOM = 20260801 // 手写模型库版本，独立于 RIME 字库版本

@@ -13,6 +13,11 @@ object DoublePinYinUtils {
         'i' to "sh",
         ';' to "ing",
     )
+    val double_pinyin_ls17 = mapOf(
+        'z' to "zh",
+        'c' to "ch",
+        's' to "sh",
+    )
     val double_pinyin = mapOf(
         'v' to "zh",
         'i' to "ch",
@@ -23,6 +28,7 @@ object DoublePinYinUtils {
     val doublePinyinMap = mapOf(
         "double_pinyin_ziguang" to double_pinyin_abc,
         "double_pinyin_ziguang" to double_pinyin_ziguang,
+        "double_pinyin_ls17" to double_pinyin_ls17,
     )
 
     fun getDoublePinYinComposition(rimeSchema: String, composition: String, comment: String): String {

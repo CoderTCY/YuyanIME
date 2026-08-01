@@ -11,6 +11,7 @@ import com.yuyan.inputmethod.core.Rime
 import com.yuyan.inputmethod.data.InputKey
 import com.yuyan.inputmethod.data.KeyRecordStack
 import com.yuyan.inputmethod.util.DoublePinYinUtils
+import com.yuyan.inputmethod.util.LX17PinYinUtils
 import com.yuyan.inputmethod.util.QwertyPinYinUtils
 import com.yuyan.inputmethod.util.T9PinYinUtils
 
@@ -213,6 +214,9 @@ object RimeEngine {
             CustomConstant.SCHEMA_ZH_T9 -> {
                 T9PinYinUtils.t9KeyToPinyin(compositionText.split('\'').firstOrNull { part -> part.isNotEmpty() && part.all { it.isUpperCase() } } ?: "")
             }
+            CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> {
+                LX17PinYinUtils.lx17KeyToPinyin(compositionText.split('\'').firstOrNull { part -> part.isNotEmpty() && part.all { it.isUpperCase() } } ?: "")
+            }
             else -> {
                 emptyArray()
             }
@@ -301,8 +305,8 @@ object RimeEngine {
                 QwertyPinYinUtils.getQwertyComposition(composition, comment)
             }
         }
-        // 九键输入层固定大写，派生拼音显示统一转大写，与 Shift/Caps 状态无关
-        val display = if (rimeSchema == CustomConstant.SCHEMA_ZH_T9) {
+        // 九键/乱序17 输入层固定大写，派生拼音显示统一转大写，与 Shift/Caps 状态无关
+        val display = if (rimeSchema == CustomConstant.SCHEMA_ZH_T9 || rimeSchema == CustomConstant.SCHEMA_ZH_DOUBLE_LX17) {
             result.uppercase()
         } else result
         return if (!composition.endsWith("'") && display.endsWith("'")) display.dropLast(1) else display

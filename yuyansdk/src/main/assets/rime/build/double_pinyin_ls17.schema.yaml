@@ -1,0 +1,160 @@
+# Rime schema
+# encoding: utf-8
+#
+# 乱序17双拼（yuyan 旧引擎码表迁移，键位映射取自 LX17PinYinUtils）
+# 键位布局：17 键（H/S/Z/B/X/M/L/D/Y/W/J/N/C/Q/G/F/T）
+# 声母：H=h/p  S=sh  Z=zh  B=b  X=x  M=m/s  L=l  D=d  Y=y
+#       W=w/z  J=j/k  N=n/r  C=ch  Q=q+零声母  G=g  F=f/c  T=t
+# 韵母：H=a/ua/ia  S=en/in  Z=ang/iao  B=ao/iong  X=uai/uan/o  M=ie/uo
+#       L=ai/ue  D=u  Y=eng/ing  W=e  J=i  N=an  C=iang/ui  Q=ian/uang
+#       G=ei/un  F=iu/ou  T=er/ong   ü(v)=X
+
+schema:
+  schema_id: double_pinyin_ls17
+  name: "乱序17"
+  version: "2026-08-02"
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 中文, 西文 ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: simplification
+    states: [ 漢字, 汉字 ]
+  - name: ascii_punct
+    states: [ 。，, ．， ]
+
+engine:
+  processors:
+    - ascii_composer
+    - recognizer
+    - key_binder
+    - speller
+    - punctuator
+    - selector
+    - navigator
+    - express_editor
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - abc_segmentor
+    - punct_segmentor
+    - fallback_segmentor
+  translators:
+    - punct_translator
+    - script_translator
+    - "table_translator@custom_phrase"
+  filters:
+    - uniquifier
+
+speller:
+  alphabet: "hszbxmldywjncqgft"
+  delimiter: " '"
+  algebra:
+    # 容错 derive（置于最前，作用于原始音节才可命中；derive 追加拼写、不替换）
+    # 旧码表笔误容错：旧表 XN=xiang、XC=xian、XQ=xun（正确键位为 XC/XQ/XG），
+    # 此处让 xn/xc/xq 作为额外拼写命中，正确键位仍为主拼写
+    - "derive/^xiang$/xn/"
+    - "derive/^xian$/xc/"
+    - "derive/^xun$/xq/"
+    # lü/nü 兜底：lv→LX、nv→NX（主路径由下方 xform/v$/X/ 覆盖，此处保证规则本身生效）
+    - "derive/^lv$/LX/"
+    - "derive/^nv$/NX/"
+    # 零声母单韵母音节直接映射（QH=a QX=o），避免与 qia/quan 冲突
+    - "xform/^a$/QH/"
+    - "xform/^o$/QX/"
+    # 零声母：a/o/e 开头音节加 Q 键前缀（QH=a QS=en QZ=ang QB=ao QX=o QL=ai QW=e QN=an QG=ei QF=ou QT=er QY=eng）
+    - "xform/^([aoe].*)$/Q$1/"
+    # 声母（长先短后）
+    - "xform/^zh/Z/"
+    - "xform/^ch/C/"
+    - "xform/^sh/S/"
+    - "xform/^h/H/"
+    - "xform/^p/H/"
+    - "xform/^s/M/"
+    - "xform/^z/W/"
+    - "xform/^b/B/"
+    - "xform/^x/X/"
+    - "xform/^m/M/"
+    - "xform/^l/L/"
+    - "xform/^d/D/"
+    - "xform/^y/Y/"
+    - "xform/^w/W/"
+    - "xform/^j/J/"
+    - "xform/^k/J/"
+    - "xform/^n/N/"
+    - "xform/^r/N/"
+    - "xform/^c/F/"
+    - "xform/^q/Q/"
+    - "xform/^g/G/"
+    - "xform/^f/F/"
+    - "xform/^t/T/"
+    # 韵母（长先短后）
+    - "xform/iang$/C/"
+    - "xform/uang$/Q/"
+    - "xform/uai$/X/"
+    - "xform/uan$/X/"
+    - "xform/iao$/Z/"
+    - "xform/iong$/B/"
+    - "xform/ing$/Y/"
+    - "xform/eng$/Y/"
+    - "xform/ue$/L/"
+    - "xform/uo$/M/"
+    - "xform/ie$/M/"
+    - "xform/ve$/L/"
+    - "xform/ia$/H/"
+    - "xform/ua$/H/"
+    - "xform/iu$/F/"
+    - "xform/un$/G/"
+    - "xform/ui$/C/"
+    - "xform/ei$/G/"
+    - "xform/ou$/F/"
+    - "xform/er$/T/"
+    - "xform/ong$/T/"
+    - "xform/ian$/Q/"
+    - "xform/an$/N/"
+    - "xform/ang$/Z/"
+    - "xform/ao$/B/"
+    - "xform/ai$/L/"
+    - "xform/en$/S/"
+    - "xform/in$/S/"
+    - "xform/a$/H/"
+    - "xform/u$/D/"
+    - "xform/o$/X/"
+    - "xform/e$/W/"
+    - "xform/i$/J/"
+    # ü(v) → X 键（词典以 v 编码：lü=lv、lüe=lve、nü=nv、nüe=nve）
+    - "xform/ü$/X/"
+    - "xform/v$/X/"
+    - "xform/üe$/L/"
+    # 大写中间标记统一映射回小写键位码（rime 拼写图大小写敏感，输入为小写）
+    - "xlit/HSZBXMLDYWJNCQGFT/hszbxmldywjncqgft/"
+
+translator:
+  always_show_comments: true
+  comment_format: []
+  dictionary: rime_ice
+  prism: double_pinyin_ls17
+  enable_word_completion: true
+  initial_quality: 1.2
+
+custom_phrase:
+  db_class: stabledb
+  dictionary: ""
+  enable_completion: false
+  enable_sentence: false
+  initial_quality: 99
+  user_dict: custom_phrase_double
+
+punctuator:
+  import_preset: default
+
+key_binder:
+  import_preset: default
+
+recognizer:
+  import_preset: default
+
+menu:
+  page_size: 100

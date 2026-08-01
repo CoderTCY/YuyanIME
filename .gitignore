@@ -3,6 +3,8 @@
 local.properties
 .DS_Store
 build/
+!yuyansdk/src/main/assets/rime/build/
+!yuyansdk/src/main/assets/rime/build/**
 captures/
 .externalNativeBuild
 .idea/

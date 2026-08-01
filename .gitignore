@@ -1,5 +1,5 @@
 # 本机/个人文件（不应入库）
-.pi/tasks/
+.pi/
 keystore/
 local.properties
 .idea/
@@ -18,13 +18,6 @@ build/
 !yuyansdk/src/main/assets/rime/build/
 !yuyansdk/src/main/assets/rime/build/**
 
-# 参考副本（JNI 桥参考 osfans/trime，不纳入版本库）
-third_party/trime/
-third_party/snappy-src/
-
-# NDK 构建产物与临时文件
+# NDK 构建产物与临时文件（boost 聚合头提取到构建目录，同样不进仓库）
 third_party/build-android/
 third_party/opencc-cmd.txt
-
-# boost 完整源码树（构建依赖，体积大；由 get-boost 脚本/手动放置准备）
-third_party/boost/

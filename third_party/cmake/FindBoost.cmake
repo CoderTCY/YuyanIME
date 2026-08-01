@@ -2,18 +2,12 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# 最小化 FindBoost：librime 在非 Linux 分支 find_package(Boost) 无 COMPONENTS，
+# 仅 header-only 使用（不链接任何 boost 库）。聚合头由 Boost.cmake 在 configure
+# 时准备到构建目录（${CMAKE_BINARY_DIR}/boost-headers），此处只提供 include 路径。
+
 set(Boost_FOUND TRUE)
-
-list(TRANSFORM BOOST_INCLUDE_LIBRARIES PREPEND Boost:: OUTPUT_VARIABLE
-                                                       Boost_LIBRARIES)
-
-file(
-  GLOB __boost_installed_libs
-  LIST_DIRECTORIES true
-  RELATIVE "${CMAKE_BINARY_DIR}"
-  "${CMAKE_BINARY_DIR}/boost/libs/*")
-
-foreach(__lib ${__boost_installed_libs})
-  set(__full_dir "${CMAKE_SOURCE_DIR}/${__lib}/include")
-  list(APPEND Boost_INCLUDE_DIRS "${__full_dir}")
-endforeach()
+set(Boost_VERSION "1.89.0")
+set(Boost_LIBRARIES "")
+set(Boost_INCLUDE_DIRS "${CMAKE_BINARY_DIR}/boost-headers")
+message(STATUS "Yuyan FindBoost executed: FOUND=${Boost_FOUND} VERSION=${Boost_VERSION} INCLUDE=${Boost_INCLUDE_DIRS}")

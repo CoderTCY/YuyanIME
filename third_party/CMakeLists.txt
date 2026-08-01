@@ -15,8 +15,11 @@ add_compile_options(-Wno-error=deprecated-declarations)
 option(BUILD_SHARED_LIBS "" OFF)
 option(BUILD_TESTING "" OFF)
 
-# Boost：构建时自动下载 boost-<version>-cmake.tar.xz 并源码编译（仅 librime 需要的模块）
+# Boost：librime 仅 header-only 使用（官方 Windows 路径同样不编译 boost 库）——
+# include(Boost) 在 configure 时自动下载/提取聚合头到构建目录（缓存项目外，不进仓库）
 include(Boost)
+# 全局 include 聚合头（librime 的 include_directories 是目录属性，不传播到 jni/ 子目录）
+include_directories("${CMAKE_BINARY_DIR}/boost-headers")
 
 option(WITH_GFLAGS "Use gflags" OFF)
 option(WITH_GTEST "Use googletest" OFF)

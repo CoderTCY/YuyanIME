@@ -15,6 +15,7 @@ import androidx.preference.PreferenceScreen
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.application.Launcher
 import com.yuyan.imemodule.manager.UserDataManager
+import com.yuyan.inputmethod.core.Kernel
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.ui.activity.LauncherActivity
 import com.yuyan.imemodule.ui.fragment.base.ManagedPreferenceFragment
@@ -40,6 +41,8 @@ class OtherSettingsFragment: ManagedPreferenceFragment(AppPrefs.getInstance().ot
     private var exportTimestamp = System.currentTimeMillis()
     private lateinit var exportLauncher: ActivityResultLauncher<String>
     private lateinit var importLauncher: ActivityResultLauncher<String>
+    private lateinit var exportDictLauncher: ActivityResultLauncher<String>
+    private lateinit var importDictLauncher: ActivityResultLauncher<String>
 
     override fun onStart() {
         super.onStart()
@@ -97,6 +100,43 @@ class OtherSettingsFragment: ManagedPreferenceFragment(AppPrefs.getInstance().ot
                     }
                 }
             }
+        exportDictLauncher =
+            registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+                if (uri == null) return@registerForActivityResult
+                val ctx = requireContext()
+                lifecycleScope.withLoadingDialog(requireContext()) {
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        try {
+                            val outputStream = ctx.contentResolver.openOutputStream(uri)!!
+                            UserDataManager.exportDictionary(outputStream).getOrThrow()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(ctx, R.string.dictionary_exported, Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            ctx.importErrorDialog(e)
+                        }
+                    }
+                }
+            }
+        importDictLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                if (uri == null) return@registerForActivityResult
+                val ctx = requireContext()
+                lifecycleScope.withLoadingDialog(ctx) {
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        try {
+                            val inputStream = ctx.contentResolver.openInputStream(uri)!!
+                            UserDataManager.importDictionary(inputStream).getOrThrow()
+                            Kernel.resetIme()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(ctx, R.string.dictionary_imported, Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            ctx.importErrorDialog(e)
+                        }
+                    }
+                }
+            }
     }
 
     override fun onPreferenceUiCreated(screen: PreferenceScreen) {
@@ -114,6 +154,23 @@ class OtherSettingsFragment: ManagedPreferenceFragment(AppPrefs.getInstance().ot
                 .setMessage(R.string.confirm_import_user_data)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
                     importLauncher.launch("application/zip")
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+        screen.addPreference(R.string.export_dictionary) {
+            lifecycleScope.launch {
+                exportTimestamp = System.currentTimeMillis()
+                exportDictLauncher.launch("yuyanIme_dict_${TimeUtils.iso8601UTCDateTime(exportTimestamp)}.zip")
+            }
+        }
+        screen.addPreference(R.string.import_dictionary) {
+            AlertDialog.Builder(ctx)
+                .setIconAttribute(android.R.attr.alertDialogIcon)
+                .setTitle(R.string.import_dictionary)
+                .setMessage(R.string.confirm_import_dictionary)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    importDictLauncher.launch("application/zip")
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()

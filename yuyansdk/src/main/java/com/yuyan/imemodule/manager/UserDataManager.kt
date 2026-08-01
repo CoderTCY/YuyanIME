@@ -2,6 +2,7 @@ package com.yuyan.imemodule.manager
 
 import com.yuyan.imemodule.BuildConfig
 import com.yuyan.imemodule.R
+import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.imemodule.application.Launcher
 import com.yuyan.imemodule.utils.errorRuntime
 import com.yuyan.imemodule.utils.extract
@@ -91,6 +92,39 @@ object UserDataManager {
                 copyDir(File(tempDir, "databases"), dataBasesDir)
                 copyDir(File(tempDir, "external"), externalDir)
                 metadata
+            }
+        }
+    }
+
+    private val rimeDir = File(CustomConstant.RIME_DICT_PATH)
+
+    fun exportDictionary(dest: OutputStream) = runCatching {
+        ZipOutputStream(dest.buffered()).use { zipStream ->
+            rimeDir.listFiles()
+                ?.filter { it.isDirectory && it.name.endsWith(".userdb") }
+                ?.forEach { dir ->
+                    writeFileTree(dir, dir.name, zipStream)
+                }
+        }
+    }
+
+    fun importDictionary(src: InputStream) = runCatching {
+        ZipInputStream(src).use { zipStream ->
+            withTempDir { tempDir ->
+                zipStream.extract(tempDir)
+                val target = File(rimeDir, "pinyin.userdb")
+                if (target.exists()) target.deleteRecursively()
+                // 优先查找 *.userdb 文件夹
+                val userdbDir = tempDir.walkTopDown()
+                    .firstOrNull { it.isDirectory && it.name.endsWith(".userdb") }
+                if (userdbDir != null) {
+                    userdbDir.copyRecursively(target)
+                } else if (File(tempDir, "CURRENT").exists()) {
+                    // zip 内容就是 userdb 内部文件（非文件夹形式压缩）
+                    tempDir.copyRecursively(target)
+                } else {
+                    errorRuntime(R.string.exception_dictionary_empty)
+                }
             }
         }
     }

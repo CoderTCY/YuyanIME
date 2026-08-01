@@ -7,6 +7,10 @@ project(yuyanime-rime CXX C)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+# leveldb 以 PUBLIC -Werror 编译选项传播到链接方，opencc/librime 的
+# C++17 弃用警告（std::iterator 等）会被提升为错误——解除该警告的 error 提升
+add_compile_options(-Wno-error=deprecated-declarations)
+
 # 通用选项
 option(BUILD_SHARED_LIBS "" OFF)
 option(BUILD_TESTING "" OFF)

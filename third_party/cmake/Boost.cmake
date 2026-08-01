@@ -37,4 +37,8 @@ set(BOOST_INCLUDE_LIBRARIES
     utility
     uuid)
 
+# boost 1.89 发布包的头文件全部聚合在源码根 boost/ 目录（libs/*/include 为空），
+# 各库 CMakeLists 只加了自身 include——补根聚合目录，否则 <boost/xxx.hpp> 找不到
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost")
+
 add_subdirectory(boost EXCLUDE_FROM_ALL)

@@ -118,3 +118,16 @@ tasks.register('makeaar', Copy) {
 }
 
 makeaar.dependsOn(build)
+
+// librime.so 不进仓库：构建时由脚本自动编译生成（存在则跳过，幂等）
+tasks.register('prepareLibrime', Exec) {
+    workingDir rootProject.projectDir
+    commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+            'third_party/scripts/build-librime.ps1'
+}
+
+tasks.configureEach { task ->
+    if (task.name == 'preBuild') {
+        task.dependsOn(prepareLibrime)
+    }
+}

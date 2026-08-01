@@ -4,7 +4,15 @@ build/
 *.apk
 *.aab
 *.tar.xz
+*.tar.gz
 
 # 参考副本（JNI 桥参考 osfans/trime，不纳入版本库）
 third_party/trime/
 third_party/snappy-src/
+
+# NDK 构建产物与临时文件
+third_party/build-android/
+third_party/opencc-cmd.txt
+
+# boost 完整源码树（构建依赖，体积大；由 get-boost 脚本/手动放置准备）
+third_party/boost/

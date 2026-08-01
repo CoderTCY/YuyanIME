@@ -334,7 +334,17 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_APOSTROPHE, KeyEvent.KEYCODE_SPACE,
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_BACK -> return true
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DEL -> return true
+            // 返回键仅在软键盘显示时消费（用于收起键盘）；键盘未显示时放行，否则会吞掉系统返回手势
+            KeyEvent.KEYCODE_BACK -> {
+                if (service.isInputViewShown) {
+                    // startTracking：Android 13+ 系统 back 手势经由 InputMethodService.compatHandleBack
+                    // 模拟 BACK 键事件，靠 FLAG_START_TRACKING 判断跟踪状态
+                    event.startTracking()
+                    return true
+                }
+                return false
+            }
         }
         return false
     }
@@ -399,8 +409,19 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
                     sendKeyEvent(keyCode)
                     resetToIdleState()
+                } else if (keyCode == KeyEvent.KEYCODE_SPACE && InputModeSwitcher.isEnglish) {
+                    // 英文单词补全时，按空格退出补全并追加空格
+                    val candId = mSkbCandidatesBarView.getActiveCandNo()
+                    val text = if (mSkbCandidatesBarView.isActiveCand()) {
+                        DecodingInfo.getCandidate(candId)?.text ?: DecodingInfo.composingStrForCommit
+                    } else {
+                        DecodingInfo.composingStrForCommit
+                    }
+                    commitDecInfoText(text)
+                    commitText(" ")
+                } else {
+                    chooseAndUpdate()
                 }
-                else chooseAndUpdate()
             }
             KeyEvent.KEYCODE_CLEAR -> resetToIdleState()
             KeyEvent.KEYCODE_ENTER -> {
@@ -659,7 +680,6 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             service.commitText(StringUtils.converted2FlowerTypeface(resultText))
             if (InputModeSwitcher.isEnglish){
                 service.finishComposingText()
-                if(appPrefs.input.abcSpaceAuto.getValue()) service.commitText(" ")
                 resetToIdleState()
             }
         }

@@ -3,6 +3,24 @@ plugins {
     id 'kotlin-android'
 }
 
+// 读取 keystore 配置（支持 keystore/keystore.properties 或环境变量）；未配置时返回 null，跳过签名配置
+static def loadReleaseSigningInfo(Project project) {
+    def keystorePropertiesFile = project.rootProject.file("keystore/keystore.properties")
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+    def keystoreFilePath = System.getenv("RELEASE_STORE_FILE") ?: keystoreProperties.getProperty('storeFile')
+    def keystorePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: keystoreProperties.getProperty('storePassword')
+    def keyAliasName = System.getenv("RELEASE_KEY_ALIAS") ?: keystoreProperties.getProperty('keyAlias')
+    def keyPasswordValue = System.getenv("RELEASE_KEY_PASSWORD") ?: keystoreProperties.getProperty('keyPassword')
+    def keystoreFile = keystoreFilePath ? project.rootProject.file(keystoreFilePath) : null
+    if (keystoreFile != null && keystoreFile.exists() && keystorePassword && keyAliasName && keyPasswordValue) {
+        return [file: keystoreFile, password: keystorePassword, alias: keyAliasName, keyPassword: keyPasswordValue]
+    }
+    return null
+}
+
 android {
     compileSdk 36
     namespace 'com.yuyan'
@@ -31,27 +49,19 @@ android {
     
     packagingOptions {
         jniLibs {
-            useLegacyPackaging true
+            // 不 extractNativeLibs：.so 未压缩直接存入 APK（对齐），安装后 mmap 加载，无需解压到私有目录
+            useLegacyPackaging false
         }
     }
 
     signingConfigs {
         release {
-            def keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
-            def keystoreProperties = new Properties()
-            if (keystorePropertiesFile.exists()) {
-                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-            }
-            def keystoreFilePath = System.getenv("RELEASE_STORE_FILE") ?: keystoreProperties.getProperty('storeFile')
-            def keystorePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: keystoreProperties.getProperty('storePassword')
-            def keyAliasName = System.getenv("RELEASE_KEY_ALIAS") ?: keystoreProperties.getProperty('keyAlias')
-            def keyPasswordValue = System.getenv("RELEASE_KEY_PASSWORD") ?: keystoreProperties.getProperty('keyPassword')
-            def keystoreFile = rootProject.file(keystoreFilePath)
-            if (keystoreFile.exists() && keystorePassword && keyAliasName && keyPasswordValue) {
-                storeFile keystoreFile
-                storePassword keystorePassword
-                keyAlias keyAliasName
-                keyPassword keyPasswordValue
+            def ks = loadReleaseSigningInfo(project)
+            if (ks != null) {
+                storeFile ks.file
+                storePassword ks.password
+                keyAlias ks.alias
+                keyPassword ks.keyPassword
                 v1SigningEnabled true
                 v2SigningEnabled true
             }
@@ -74,12 +84,18 @@ android {
             shrinkResources true
             applicationIdSuffix  ".release"
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard.cfg'
-            signingConfig signingConfigs.release
+            // 未配置 keystore 时不启用 release 签名（否则 AGP 会因空签名配置报错）
+            if (loadReleaseSigningInfo(project) != null) {
+                signingConfig signingConfigs.release
+            }
         }
 
         debug {
             applicationIdSuffix ".debug"
-            signingConfig signingConfigs.release
+            // 没有配置 keystore 时，debug 构建回退到默认 debug 签名，避免签名配置为空导致打包失败
+            if (loadReleaseSigningInfo(project) != null) {
+                signingConfig signingConfigs.release
+            }
         }
 
     }
@@ -87,6 +103,9 @@ android {
     compileOptions {
         sourceCompatibility 17
         targetCompatibility 17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
     }
     android.applicationVariants.configureEach { variant ->
         variant.outputs.configureEach {

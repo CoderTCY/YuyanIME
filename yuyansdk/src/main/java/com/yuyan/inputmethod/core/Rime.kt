@@ -23,7 +23,7 @@ class Rime(fullCheck: Boolean) {
         }
 
         init {
-            System.loadLibrary("yuyanime")
+            System.loadLibrary("rime")
         }
 
         fun startup(context: Context, fullCheck: Boolean) {

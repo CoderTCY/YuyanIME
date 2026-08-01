@@ -127,12 +127,6 @@ object InputModeSwitcher {
 
     /**
      * A kind of soft keyboard layout. An input mode should be anded with
-     * [.MASK_SKB_LAYOUT] to get its soft keyboard layout. 指明乱序17
-     */
-    const val MASK_SKB_LAYOUT_LX17 = 0x6000
-
-    /**
-     * A kind of soft keyboard layout. An input mode should be anded with
      * [.MASK_SKB_LAYOUT] to get its soft keyboard layout. 指明笔画键盘
      */
     const val MASK_SKB_LAYOUT_STROKE = 0x7000
@@ -341,7 +335,7 @@ object InputModeSwitcher {
             getInstance().internal.inputDefaultMode.setValue(mInputMode)
         }
         mToggleStates.modifiers = when(Kernel.getCurrentRimeSchema()) {
-            CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
+            CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE -> KeyEvent.META_CAPS_LOCK_ON
             else -> MASK_CASE_LOWER
         }
         // 同步引擎大小写状态，保持键盘 toggle 与 RimeEngine.charCase 一致

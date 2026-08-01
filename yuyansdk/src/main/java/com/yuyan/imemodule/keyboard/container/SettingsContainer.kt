@@ -168,13 +168,6 @@ class SettingsContainer(context: Context, inputView: InputView) : BaseContainer(
         )
         funItems.add(
             SkbFunItem(
-                mContext.getString(R.string.keyboard_name_pinyin_lx_17),
-                R.drawable.selece_input_mode_lx17,
-                SkbMenuMode.PinyinLx17
-            )
-        )
-        funItems.add(
-            SkbFunItem(
                 mContext.getString(R.string.keyboard_name_stroke),
                 R.drawable.selece_input_mode_stroke,
                 SkbMenuMode.PinyinStroke
@@ -191,7 +184,6 @@ class SettingsContainer(context: Context, inputView: InputView) : BaseContainer(
         val value = when (data.skbMenuMode) {
             SkbMenuMode.Pinyin26Jian -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_QWERTY_PINYIN, CustomConstant.SCHEMA_ZH_QWERTY)
             SkbMenuMode.PinyinHandWriting -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_HANDWRITING, CustomConstant.SCHEMA_ZH_HANDWRITING)
-            SkbMenuMode.PinyinLx17 -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_LX17, CustomConstant.SCHEMA_ZH_DOUBLE_LX17)
             SkbMenuMode.PinyinStroke -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_STROKE, CustomConstant.SCHEMA_ZH_STROKE)
             SkbMenuMode.Pinyin26Double -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_QWERTY_PINYIN, CustomConstant.SCHEMA_ZH_DOUBLE_FLYPY + AppPrefs.getInstance().input.doublePYSchemaMode.getValue())
             else -> Pair(InputModeSwitcher.MASK_SKB_LAYOUT_T9_PINYIN, CustomConstant.SCHEMA_ZH_T9)

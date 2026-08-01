@@ -1,0 +1,18 @@
+﻿schema:
+  schema_id: handwriting
+  name: 手写
+  version: "1.0"
+  engine:
+    processors:
+      - speller
+    segmentors:
+      - fallback_segmentor
+    translators:
+      - table_translator
+  speller:
+    alphabet: abcdefghijklmnopqrstuvwxyz
+    delimiter: " "
+  translator:
+    dictionary: ""
+  menu:
+    page_size: 100

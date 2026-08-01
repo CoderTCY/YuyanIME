@@ -321,7 +321,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
         } else {
             val metaState = when(Kernel.getCurrentRimeSchema()) {
-                CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
+                CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE -> KeyEvent.META_CAPS_LOCK_ON
                 else -> InputModeSwitcher.mToggleStates.modifiers
             }
             processKeyUp(KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState, 0, 0, KeyEvent.FLAG_SOFT_KEYBOARD))

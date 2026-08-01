@@ -4,7 +4,6 @@ import android.view.KeyEvent
 import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.inputmethod.RimeEngine.processDelAction
 import com.yuyan.inputmethod.core.Rime
-import com.yuyan.inputmethod.util.LX17PinYinUtils
 import com.yuyan.inputmethod.util.T9PinYinUtils
 import java.util.LinkedList
 
@@ -70,11 +69,6 @@ class KeyRecordStack {
         when (rimeSchema) {
             CustomConstant.SCHEMA_ZH_T9 -> {
                 T9PinYinUtils.pinyin2Key(pinyin).forEach {
-                    keys.add(InputKey.T9Key(it))
-                }
-            }
-            CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> {
-                LX17PinYinUtils.pinyin2Key(pinyin).forEach {
                     keys.add(InputKey.T9Key(it))
                 }
             }
@@ -166,9 +160,6 @@ interface InputKey {
                 CustomConstant.SCHEMA_ZH_T9 -> {
                     T9PinYinUtils.pinyin2Key(pinyin)
                 }
-                CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> {
-                    LX17PinYinUtils.pinyin2Key(pinyin)
-                }
                 else -> ""
             }
         }
@@ -179,11 +170,6 @@ interface InputKey {
             when (rimeSchema) {
                 CustomConstant.SCHEMA_ZH_T9 -> {
                     T9PinYinUtils.pinyin2Key(pinyin).forEach {
-                        keys.add(T9Key(it))
-                    }
-                }
-                CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> {
-                    LX17PinYinUtils.pinyin2Key(pinyin).forEach {
                         keys.add(T9Key(it))
                     }
                 }

@@ -1,0 +1,29 @@
+﻿schema:
+  schema_id: stroke
+  name: 五笔画
+  version: "1.0"
+  engine:
+    processors:
+      - speller
+      - selector
+      - navigator
+      - express_editor
+    segmentors:
+      - abc_segmentor
+      - fallback_segmentor
+    translators:
+      - table_translator
+  speller:
+    alphabet: "hspnz"
+    delimiter: " "
+    algebra: []
+  translator:
+    dictionary: stroke
+    preedit_format:
+      - xform/h/一/
+      - xform/s/丨/
+      - xform/p/丿/
+      - xform/n/丶/
+      - xform/z/乙/
+  menu:
+    page_size: 100

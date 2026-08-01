@@ -30,7 +30,6 @@
     <string name="chinese_association_date">中文联想显示时间</string>
     <string name="EnglishInput">英文输入</string>
     <string name="engish_full_keyboard">数字行</string>
-    <string name="lx17_with_left_prefix">乱序17键盘显示拼音选择</string>
     <string name="emoji_setting">表情输入</string>
     <string name="emoji_input">候选词中显示Emoji表情</string>
     <string name="symbol_setting">符号输入</string>
@@ -158,7 +157,6 @@
     <string name="double_pinyin_sougou">搜狗双拼</string>
     <string name="double_pinyin_ziguang">紫光双拼</string>
 
-    <string name="keyboard_name_pinyin_lx_17">乱序17</string>
     <string name="keyboard_iv_menu_close">关闭键盘</string>
     <string name="space_swipe_move_cursor">滑动空格键移动光标</string>
     <string name="swipe_move_cursor_speed">触发移动光标所需距离</string>

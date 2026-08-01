@@ -35,6 +35,7 @@ import com.yuyan.imemodule.keyboard.KeyboardManager
 import com.yuyan.imemodule.keyboard.container.CandidatesContainer
 import com.yuyan.imemodule.keyboard.container.ClipBoardContainer
 import com.yuyan.imemodule.keyboard.container.InputBaseContainer
+import com.yuyan.imemodule.keyboard.container.SymbolContainer
 import com.yuyan.imemodule.manager.layout.CustomLinearLayoutManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -283,7 +284,8 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
             } else {
                 listOf(menuSkbFunsPreset[SkbMenuMode.AddPhrases]!!, menuSkbFunsPreset[SkbMenuMode.ClipBoard]!!, menuSkbFunsPreset[SkbMenuMode.Phrases]!!, menuSkbFunsPreset[SkbMenuMode.LockClipBoard]!!)
             }
-        } else if (DecodingInfo.isCandidatesEmpty) {
+        } else if (container is SymbolContainer || DecodingInfo.isCandidatesEmpty) {
+            // 符号键盘只显示顶部菜单栏（不显示候选词），与无候选时一致
             mRightArrowBtn.drawable.setLevel(0)
             showViewVisibility(mCandidatesMenuContainer)
             val mFunItems: MutableList<SkbFunItem> = mutableListOf()

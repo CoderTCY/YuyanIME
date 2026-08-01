@@ -41,8 +41,13 @@ class Launcher {
             if (dataDictVersion < CustomConstant.CURRENT_RIME_DICT_DATA_VERSIOM) {
                 //rime词库
                 copyFileOrDir(context, "rime", "", CustomConstant.RIME_DICT_PATH, true)
-                copyFileOrDir(context, "hw", "", CustomConstant.HW_DICT_PATH, true)
                 AppPrefs.getInstance().internal.dataDictVersion.setValue(CustomConstant.CURRENT_RIME_DICT_DATA_VERSIOM)
+            }
+            // 复制手写模型文件（版本号独立于 rime 词库）
+            val hwDictVersion = AppPrefs.getInstance().internal.hwDictVersion.getValue()
+            if (hwDictVersion < CustomConstant.CURRENT_HW_DICT_DATA_VERSIOM) {
+                copyFileOrDir(context, "hw", "", CustomConstant.HW_DICT_PATH, true)
+                AppPrefs.getInstance().internal.hwDictVersion.setValue(CustomConstant.CURRENT_HW_DICT_DATA_VERSIOM)
             }
             Kernel.resetIme()  // 解决词库复制慢，导致先调用初始化问题
             YuyanEmojiCompat.init(context)

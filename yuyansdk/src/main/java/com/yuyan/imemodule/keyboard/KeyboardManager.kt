@@ -76,6 +76,8 @@ class KeyboardManager {
         mKeyboardRootView.showView(container)
         mCurrentKeyboardName = keyboardName
         currentContainer = container
+        // 符号键盘时候选栏需刷新为菜单栏模式（只显示顶部菜单栏，不显示候选词）
+        if (::mInputView.isInitialized && keyboardName == KeyboardType.SYMBOL) mInputView.updateCandidateBar()
     }
 
     val isInputKeyboard: Boolean

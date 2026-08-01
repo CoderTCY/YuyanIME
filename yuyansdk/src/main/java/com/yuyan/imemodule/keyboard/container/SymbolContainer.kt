@@ -174,7 +174,7 @@ class SymbolContainer(context: Context, inputView: InputView) : BaseContainer(co
             DataBaseKT.instance.usedSymbolDao().insert(UsedSymbol(symbol = result))
             val num = max(DataBaseKT.instance.usedSymbolDao().getCount("symbol") - 50, 0)
             DataBaseKT.instance.usedSymbolDao().deleteOldest("symbol", num)
-            if(!isLockSymbol) KeyboardManager.instance.switchKeyboard()
+            // 选择符号后停留在符号界面，不自动返回主键盘（可由符号栏的返回键手动切回）
             inputView.responseKeyEvent(softKey)
         } else {  //表情、颜文字
             if(!YuyanEmojiCompat.isWeChatInput || mVPSymbolsView.currentItem != 1 ) {
@@ -202,8 +202,8 @@ class SymbolContainer(context: Context, inputView: InputView) : BaseContainer(co
      */
     fun setSymbolsView() {
         mShowType = SymbolMode.Symbol
-        isLockSymbol = false   // 符号键默认未锁定，表情键盘默认锁定
-        ivDelete.setImageResource(R.drawable.icon_symbol_lock)
+        isLockSymbol = true   // 符号键盘默认锁定：选择符号后不自动返回主键盘，删除键初始即删除模式
+        ivDelete.setImageResource(R.drawable.sdk_skb_key_delete_icon)
         ivDelete.drawable.setTint(activeTheme.keyTextColor)
         val mSymbolsEmoji = EmojiconData.symbolData
         mVPSymbolsView.adapter = SymbolPagerAdapter(context, mSymbolsEmoji, mShowType){ symbol, _ ->

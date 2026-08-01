@@ -344,6 +344,8 @@ object InputModeSwitcher {
             CustomConstant.SCHEMA_ZH_T9, CustomConstant.SCHEMA_ZH_STROKE, CustomConstant.SCHEMA_ZH_DOUBLE_LX17 -> KeyEvent.META_CAPS_LOCK_ON
             else -> MASK_CASE_LOWER
         }
+        // 同步引擎大小写状态，保持键盘 toggle 与 RimeEngine.charCase 一致
+        Kernel.setCharCase(mToggleStates.modifiers)
     }
 
     /**
@@ -352,6 +354,8 @@ object InputModeSwitcher {
     fun resetCharCase() {
         if(mToggleStates.modifiers == KeyEvent.META_SHIFT_ON){
             mToggleStates.modifiers = MASK_CASE_LOWER
+            // 同步引擎大小写状态，避免下一次候选栏刷新仍按过期的单次大写状态整体转换已输入内容
+            Kernel.setCharCase(MASK_CASE_LOWER)
             (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
         }
     }

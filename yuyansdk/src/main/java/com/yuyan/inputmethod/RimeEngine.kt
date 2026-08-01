@@ -14,7 +14,6 @@ import com.yuyan.inputmethod.util.DoublePinYinUtils
 import com.yuyan.inputmethod.util.LX17PinYinUtils
 import com.yuyan.inputmethod.util.QwertyPinYinUtils
 import com.yuyan.inputmethod.util.T9PinYinUtils
-import java.util.Locale
 
 object RimeEngine {
     private val keyRecordStack = KeyRecordStack()
@@ -23,6 +22,7 @@ object RimeEngine {
     var showComposition: String = "" // 候选词上方展示的拼音
     var preCommitText: String = "" // 待提交的文字
     private var customPhraseSize: Int = 0 // 自定义引擎候选词长度
+    private var rimeCandidateIndexMap: List<Int> = emptyList() // 筛选后候选显示顺序 → rime 原始候选索引
     const val MASK_CASE_LOWER = 0
     private var charCase = 0x0000
     fun init() {
@@ -61,7 +61,9 @@ object RimeEngine {
     }
 
     fun selectCandidate(index: Int): String? {
-        val indexReal = index - customPhraseSize
+        val displayIndex = index - customPhraseSize
+        // 形态筛选改变了候选显示顺序，需映射回 rime 原始候选索引（未筛选/越界时恒等）
+        val indexReal = rimeCandidateIndexMap.getOrElse(displayIndex) { displayIndex }
         Rime.selectCandidate(indexReal)
         keyRecordStack.pushCandidateSelectAction()
         return updateCandidatesOrCommitText()
@@ -70,25 +72,11 @@ object RimeEngine {
     fun getNextPageCandidates(): Array<CandidateListItem> {
         return if (Rime.hasRight()) {
             Rime.processKey(getRimeKeycodeByName("Page_Down"), 0)
-           val candidates = Rime.getRimeContext()!!.candidates
-            when (charCase) {
-                KeyEvent.META_SHIFT_ON -> {
-                    for (item in candidates) {
-                        item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                    }
-                }
-                KeyEvent.META_CAPS_LOCK_ON -> {
-                    for (item in candidates) {
-                        item.text = item.text.uppercase()
-                    }
-                }
-                else -> {
-                    for (item in candidates) {
-                        item.text = item.text.lowercase()
-                    }
-                }
-            }
-            candidates
+            val candidates = Rime.getRimeContext()!!.candidates
+            // 英文候选按输入形态筛选（筛选而非转换），并更新筛选后位置 → rime 原始索引的映射
+            val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates.asList(), Rime.compositionText)
+            rimeCandidateIndexMap = indexMap
+            filteredCandidates.toTypedArray()
         } else emptyArray()
     }
 
@@ -168,14 +156,8 @@ object RimeEngine {
         val rimeCommit = Rime.getRimeCommit()
         if (rimeCommit != null) {
             keyRecordStack.clear()
+            // rime 提交的即词条/输入原文（如 iPhone、JavaScript），不做大小写转换
             preCommitText = rimeCommit.commitText
-            preCommitText = if (charCase == KeyEvent.META_SHIFT_ON) {
-                preCommitText.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-            } else if (charCase == KeyEvent.META_CAPS_LOCK_ON) {
-                preCommitText.uppercase()
-            } else {
-                preCommitText.lowercase()
-            }
             showComposition = ""
             showCandidates = emptyList()
             return preCommitText
@@ -186,14 +168,25 @@ object RimeEngine {
         showCandidates = when {
             compositionText.isNotBlank() -> {
                 val phrase = CustomEngine.processPhrase(compositionText.replace("\'", ""))
-                if(InputModeSwitcher.isEnglish && StringUtils.isLetter(compositionText) &&
-                    !compositionText.equals(candidates.first().text, ignoreCase = true) ){
-                    phrase.add(0, compositionText)
+                if(InputModeSwitcher.isEnglish && StringUtils.isLetter(compositionText)){
+                    if(compositionText.equals(candidates.first().text, ignoreCase = true)){
+                        // rime 首候选回显了已输入串（忽略大小写）：echo 与词典候选分开处理，
+                        // 回显项用逐字符输入的原文覆盖其文本，按输入原文显示且不参与形态筛选
+                        candidates.first().text = compositionText
+                    } else {
+                        phrase.add(0, compositionText)
+                    }
                 }
                 customPhraseSize = phrase.size
-                phrase.map { content -> CandidateListItem("📋", content) }.toMutableList().plus(candidates)
+                // 英文候选按输入形态筛选（筛选而非转换），并记录筛选后位置 → rime 原始索引的映射
+                val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates, compositionText)
+                rimeCandidateIndexMap = indexMap
+                phrase.map { content -> CandidateListItem("📋", content) }.toMutableList().plus(filteredCandidates)
             }
-            else -> candidates
+            else -> {
+                rimeCandidateIndexMap = emptyList()
+                candidates
+            }
         }
         var count = Rime.compositionText.count { it in 'A'..'Z' }
         if (count > 0) {
@@ -201,21 +194,7 @@ object RimeEngine {
                 if (inputKey is InputKey.T9Key) inputKey.consumed = count-- <= 0
             }
         }
-        var composition = getCurrentComposition(candidates)
-        when (charCase) {
-            KeyEvent.META_SHIFT_ON -> {
-                for (item in showCandidates) item.text = item.text.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                composition = composition.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-            }
-            KeyEvent.META_CAPS_LOCK_ON -> {
-                for (item in showCandidates) item.text = item.text.uppercase()
-                composition = composition.uppercase()
-            }
-            else -> {
-                for (item in showCandidates) item.text = item.text.lowercase()
-                composition = composition.lowercase()
-            }
-        }
+        val composition = getCurrentComposition(candidates)
         val rimeSchema = Rime.getCurrentRimeSchema()
         pinyins = when (rimeSchema) {
             CustomConstant.SCHEMA_ZH_T9 -> {
@@ -234,6 +213,42 @@ object RimeEngine {
     }
 
     /**
+     * 英文候选大小写形态筛选（筛选而非转换）：
+     * rime 英文词典以小写编码匹配，同一单词的各种大小写形态变体（java/Java/JAVA/JAva…）都会进入候选，
+     * 这里按已输入串的实际大小写形态过滤，只保留形态匹配的词条：
+     * - 大写锁定时只保留全大写词条（MA → MARK）；
+     * - 输入全小写 → 只保留全小写词条（javasc → javascript）；
+     * - 输入首字母大写 → 只保留 Title 词条（Jav → Java/JavaScript）；
+     * - 输入全大写（非锁定，如连按 ⇧）→ 只保留 Title 词条（Mark）；
+     * - 混合输入 → 逐字符前缀大小写一致（iPh → iPhone、JavaSc → JavaScript）。
+     * echo 回显项（与已输入串相同）、📋 自定义项、含非字母的词条（中文等）始终保留；
+     * 筛选结果为空时降级返回原列表。
+     * @return 筛选后的候选列表 + 筛选后位置 → 原列表位置的索引映射
+     */
+    private fun filterEnglishCandidates(items: List<CandidateListItem>, input: String): Pair<List<CandidateListItem>, List<Int>> {
+        if (input.isEmpty() || !StringUtils.isLetter(input)) return items to emptyList()
+        val capsLock = charCase == KeyEvent.META_CAPS_LOCK_ON
+        val shapeMatch: (String) -> Boolean = { word ->
+            when {
+                capsLock -> word.all { !it.isLetter() || it.isUpperCase() }
+                input.all { it.isLowerCase() } -> word.all { !it.isLetter() || it.isLowerCase() }
+                input.all { it.isUpperCase() } ->
+                    word.first().isUpperCase() && word.drop(1).all { !it.isLetter() || it.isLowerCase() }
+                input.first().isUpperCase() && input.drop(1).all { it.isLowerCase() } ->
+                    word.first().isUpperCase() && word.drop(1).all { !it.isLetter() || it.isLowerCase() }
+                else -> word.length >= input.length && word.zip(input).all { (c, i) -> !c.isLetter() || c.isUpperCase() == i.isUpperCase() }
+            }
+        }
+        val kept = items.mapIndexedNotNull { index, item ->
+            if (item.comment == "📋" || item.text.equals(input, ignoreCase = true) ||
+                !item.text.all { it.isLetter() } || shapeMatch(item.text)
+            ) index to item else null
+        }
+        return if (kept.isEmpty()) items to emptyList()
+        else kept.map { it.second } to kept.map { it.first }
+    }
+
+    /**
      * 拿到候选词拼音组合
      */
     fun getPrefixs(): Array<String> {
@@ -247,7 +262,7 @@ object RimeEngine {
         if(composition.isEmpty()) return ""
         if(candidates.isEmpty()) return composition
         val comment = candidates.first().comment
-        val result =  when {
+        val result = when {
             comment.isNotBlank() && comment.startsWith("~") -> composition
             rimeSchema == CustomConstant.SCHEMA_ZH_T9 -> {
                 T9PinYinUtils.getT9Composition(composition, comment)
@@ -260,7 +275,11 @@ object RimeEngine {
                 QwertyPinYinUtils.getQwertyComposition(composition, comment)
             }
         }
-        return if (!composition.endsWith("'") && result.endsWith("'")) result.dropLast(1) else result
+        // 九键/乱序17 输入层固定大写，派生拼音显示统一转大写，与 Shift/Caps 状态无关
+        val display = if (rimeSchema == CustomConstant.SCHEMA_ZH_T9 || rimeSchema == CustomConstant.SCHEMA_ZH_DOUBLE_LX17) {
+            result.uppercase()
+        } else result
+        return if (!composition.endsWith("'") && display.endsWith("'")) display.dropLast(1) else display
     }
 
     /**

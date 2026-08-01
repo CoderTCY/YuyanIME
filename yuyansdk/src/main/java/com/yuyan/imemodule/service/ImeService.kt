@@ -42,7 +42,10 @@ class ImeService : InputMethodService() {
     private var isSoftKeyboard = false
     private lateinit var mInputView: InputView
     private lateinit var mCandidateView: CandidateView
-    private val onThemeChangeListener = OnThemeChangeListener { _: Theme? -> if (isHardwareKeyboard) mCandidateView.updateTheme() else mInputView.updateTheme()}
+    private val onThemeChangeListener = OnThemeChangeListener { _: Theme? ->
+        if (isHardwareKeyboard) { if (::mCandidateView.isInitialized) mCandidateView.updateTheme() }
+        else { if (::mInputView.isInitialized) mInputView.updateTheme() }
+    }
     private val clipboardUpdateContent = getInstance().internal.clipboardUpdateContent
     private val clipboardUpdateContentListener = ManagedPreference.OnChangeListener<String> { _, value ->
         if(isSoftKeyboard && getInstance().clipboard.clipboardSuggestion.getValue()){
@@ -118,16 +121,17 @@ class ImeService : InputMethodService() {
         // 0 != event.getRepeatCount()  长按物理按键或 Shift/Meta/Ctrl的组合按键时，交由系统处理;有个特殊组合键：Ctrl+SPACE切换语言
         return if (0 != event.repeatCount || event.isShiftPressed || event.isMetaPressed) super.onKeyDown(keyCode, event)
         else if(event.isCtrlPressed && keyCode != KeyEvent.KEYCODE_SPACE)super.onKeyDown(keyCode, event)
-        else if (isSoftKeyboard) mInputView.processKeyDown(keyCode, event) || super.onKeyUp(keyCode, event)
-        else if (isHardwareKeyboard) mCandidateView.processKeyDown(keyCode, event) || super.onKeyUp(keyCode, event)
+        // isSoftKeyboard 在 onStartInput 即置 true，但键盘可能从未弹出，mInputView（lateinit）可能未初始化，必须加守卫
+        else if (isSoftKeyboard && ::mInputView.isInitialized) mInputView.processKeyDown(keyCode, event) || super.onKeyUp(keyCode, event)
+        else if (isHardwareKeyboard && ::mCandidateView.isInitialized) mCandidateView.processKeyDown(keyCode, event) || super.onKeyUp(keyCode, event)
         else super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         return if (0 != event.repeatCount || event.isShiftPressed || event.isMetaPressed) super.onKeyDown(keyCode, event)
         else if(event.isCtrlPressed && keyCode != KeyEvent.KEYCODE_SPACE)super.onKeyDown(keyCode, event)
-        else if (isSoftKeyboard) mInputView.processKeyUp(event) || super.onKeyUp(keyCode, event)
-        else if (isHardwareKeyboard) mCandidateView.processKeyUp(event) || super.onKeyUp(keyCode, event)
+        else if (isSoftKeyboard && ::mInputView.isInitialized) mInputView.processKeyUp(event) || super.onKeyUp(keyCode, event)
+        else if (isHardwareKeyboard && ::mCandidateView.isInitialized) mCandidateView.processKeyUp(event) || super.onKeyUp(keyCode, event)
         else super.onKeyDown(keyCode, event)
     }
 
@@ -193,7 +197,12 @@ class ImeService : InputMethodService() {
     }
 
     override fun onWindowHidden() {
-        if(isSoftKeyboard) mInputView.onWindowHidden()
+        try {
+            if (isSoftKeyboard) mInputView.onWindowHidden()
+        } catch (e: Exception) {
+            // 必须保证 hideWindow 完整执行（内部还有 unregisterDefaultOnBackInvokedCallback 等关键步骤），
+            // 否则 back 回调残留会导致键盘收起后全面屏返回手势被 IME 消费、应用收不到返回事件
+        }
         super.onWindowHidden()
     }
 

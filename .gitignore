@@ -7,6 +7,6 @@ captures/
 .externalNativeBuild
 .idea/
 *.jks
-keystore/keystore.properties
+keystore/
 /.kotlin
 *.log

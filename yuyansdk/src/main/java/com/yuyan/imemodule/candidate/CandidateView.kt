@@ -125,6 +125,17 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
                 if (DecodingInfo.isCandidatesEmpty || (DecodingInfo.isAssociate && !mSkbCandidatesBarView.isActiveCand())) {
                     sendKeyEvent(keyCode)
                     resetToIdleState()
+                } else if (keyCode == KeyEvent.KEYCODE_SPACE && InputModeSwitcher.isEnglish) {
+                    // 英文单词补全时，按空格退出补全并追加空格
+                    val candId = mSkbCandidatesBarView.getActiveCandNo()
+                    val text = if (mSkbCandidatesBarView.isActiveCand()) {
+                        DecodingInfo.getCandidate(candId)?.text ?: DecodingInfo.composingStrForCommit
+                    } else {
+                        DecodingInfo.composingStrForCommit
+                    }
+                    commitDecInfoText(text)
+                    service.commitText(" ")
+                    resetToIdleState()
                 } else {
                     chooseAndUpdate()
                 }
@@ -237,7 +248,6 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
         service.commitText(StringUtils.converted2FlowerTypeface(resultText))
         if (InputModeSwitcher.isEnglish){
             service.finishComposingText()
-            if(appPrefs.input.abcSpaceAuto.getValue()) service.commitText(" ")
             resetToIdleState()
         }
     }

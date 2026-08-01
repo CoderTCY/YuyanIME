@@ -23,6 +23,10 @@ class KeyRecordStack {
         }
     }
 
+    fun forEach(action: (InputKey) -> Unit) {
+        keyRecords.forEach(action)
+    }
+
     fun pushKey(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
         val keyChar = event.unicodeChar

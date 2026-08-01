@@ -74,7 +74,7 @@ object RimeEngine {
             Rime.processKey(getRimeKeycodeByName("Page_Down"), 0)
             val candidates = Rime.getRimeContext()!!.candidates
             // 英文候选按输入形态筛选（筛选而非转换），并更新筛选后位置 → rime 原始索引的映射
-            val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates.asList(), Rime.compositionText)
+            val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates.asList(), getEchoComposition())
             rimeCandidateIndexMap = indexMap
             filteredCandidates.toTypedArray()
         } else emptyArray()
@@ -165,21 +165,25 @@ object RimeEngine {
         val candidates = Rime.getRimeContext()?.candidates?.asList() ?: emptyList()
         customPhraseSize = 0
         val compositionText = Rime.compositionText
+        // echo 回显与英文形态筛选的依据：从按键记录重建的真实输入串（含大小写），
+        // 不依赖 rime preedit——引擎对 preedit 的大小写处理（折叠/保留）不可控，会导致 echo 大小写飘忽
+        val echoComposition = getEchoComposition()
         showCandidates = when {
             compositionText.isNotBlank() -> {
                 val phrase = CustomEngine.processPhrase(compositionText.replace("\'", ""))
-                if(InputModeSwitcher.isEnglish && StringUtils.isLetter(compositionText)){
-                    if(compositionText.equals(candidates.first().text, ignoreCase = true)){
+                if(InputModeSwitcher.isEnglish && echoComposition.isNotEmpty() && StringUtils.isLetter(echoComposition)){
+                    val firstText = candidates.firstOrNull()?.text
+                    if(firstText != null && echoComposition.equals(firstText, ignoreCase = true)){
                         // rime 首候选回显了已输入串（忽略大小写）：echo 与词典候选分开处理，
                         // 回显项用逐字符输入的原文覆盖其文本，按输入原文显示且不参与形态筛选
-                        candidates.first().text = compositionText
+                        candidates.first().text = echoComposition
                     } else {
-                        phrase.add(0, compositionText)
+                        phrase.add(0, echoComposition)
                     }
                 }
                 customPhraseSize = phrase.size
                 // 英文候选按输入形态筛选（筛选而非转换），并记录筛选后位置 → rime 原始索引的映射
-                val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates, compositionText)
+                val (filteredCandidates, indexMap) = filterEnglishCandidates(candidates, echoComposition)
                 rimeCandidateIndexMap = indexMap
                 phrase.map { content -> CandidateListItem("📋", content) }.toMutableList().plus(filteredCandidates)
             }
@@ -210,6 +214,22 @@ object RimeEngine {
         showComposition = composition
         preCommitText = ""
         return null
+    }
+
+    /**
+     * 从按键记录重建真实输入串（含大小写）：T9Key 存大写、QwertKey 存小写，
+     * 逐字符还原用户实际键入的形态，作为 echo 回显与英文形态筛选的依据。
+     */
+    private fun getEchoComposition(): String {
+        val sb = StringBuilder()
+        keyRecordStack.forEach { key ->
+            when (key) {
+                is InputKey.T9Key, is InputKey.QwertKey -> sb.append(key.toString())
+                is InputKey.Apostrophe -> sb.append('\'')
+                else -> {}
+            }
+        }
+        return sb.toString()
     }
 
     /**

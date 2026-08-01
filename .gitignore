@@ -1,14 +1,10 @@
-*.iml
-.gradle/
-local.properties
-.DS_Store
+# 构建产物
 build/
-!yuyansdk/src/main/assets/rime/build/
-!yuyansdk/src/main/assets/rime/build/**
-captures/
-.externalNativeBuild
-.idea/
-*.jks
-keystore/
-/.kotlin
-*.log
+.gradle/
+*.apk
+*.aab
+*.tar.xz
+
+# 参考副本（JNI 桥参考 osfans/trime，不纳入版本库）
+third_party/trime/
+third_party/snappy-src/

@@ -102,9 +102,10 @@ object DecodingInfo {
         if(!isEngineFinish || isAssociate) { // Rime和联想
             if (candId >= 0) Kernel.getWordSelectedWord(candId)
             val newCandidates = Kernel.candidates
-            candidate = if (newCandidates.isNotEmpty()) Kernel.commitText
-            else if (candId in 0..<candidateSize) Kernel.commitText.ifEmpty { candidatesLiveData.value!![candId].text }
-            else ""
+            // 上屏文本优先取点击候选的显示文本（显示形态=提交形态，避免引擎 commitText 大小写不可控），
+            // 无对应候选（未指定索引等）时回退引擎 commitText
+            val chosenText = if (candId in 0..<candidateSize) candidatesLiveData.value!![candId].text else ""
+            candidate = if (chosenText.isNotEmpty()) chosenText else Kernel.commitText
             candidatesLiveData.value = newCandidates
         } else {  // 手写
             candidate = if (candId in 0..<candidateSize) candidatesLiveData.value!![candId].text  else ""

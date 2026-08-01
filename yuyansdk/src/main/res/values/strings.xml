@@ -214,6 +214,12 @@
     <string name="exception_user_data_metadata">找不到用户数据的元数据</string>
     <string name="user_data_imported">已导入数据，请重启</string>
     <string name="confirm_import_user_data">导入用户数据会覆盖本地设置与输入历史，并且在重启应用后才能生效。继续吗？</string>
+    <string name="export_dictionary">导出词库</string>
+    <string name="import_dictionary">导入词库</string>
+    <string name="dictionary_exported">词库已导出</string>
+    <string name="dictionary_imported">词库已导入</string>
+    <string name="confirm_import_dictionary">导入词库会覆盖当前用户词典，确定继续？</string>
+    <string name="exception_dictionary_empty">压缩包中未找到词库文件</string>
     <string name="restart_channel">应用重启</string>
     <string name="restart_notify_msg">应用已被重启，点击此处打开</string>
 

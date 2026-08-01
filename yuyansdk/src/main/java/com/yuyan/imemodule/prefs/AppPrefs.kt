@@ -235,9 +235,9 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val clipboardHistoryLimit = int(
             R.string.clipboard_limit,
             "clipboard_limit",
-            50,
+            9999,
             10,
-            110,
+            99999,
             "条",
             10,
             defaultLabel = R.string.num_50

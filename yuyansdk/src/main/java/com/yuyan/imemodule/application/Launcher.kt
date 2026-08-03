@@ -49,6 +49,12 @@ class Launcher {
                 copyFileOrDir(context, "hw", "", CustomConstant.HW_DICT_PATH, true)
                 AppPrefs.getInstance().internal.hwDictVersion.setValue(CustomConstant.CURRENT_HW_DICT_DATA_VERSIOM)
             }
+            // 联想预测词库（librime-predict 的 predict.db）：独立版本号，升级替换时强制覆盖
+            val predictDbVersion = AppPrefs.getInstance().internal.predictDbVersion.getValue()
+            if (predictDbVersion < CustomConstant.CURRENT_PREDICT_DB_DATA_VERSION) {
+                copyFileOrDir(context, "rime", "predict.db", CustomConstant.RIME_DICT_PATH, true)
+                AppPrefs.getInstance().internal.predictDbVersion.setValue(CustomConstant.CURRENT_PREDICT_DB_DATA_VERSION)
+            }
             Kernel.resetIme()  // 解决词库复制慢，导致先调用初始化问题
             YuyanEmojiCompat.init(context)
             //初始化键盘主题

@@ -3,15 +3,40 @@
 # 幂等：目标 so 已存在且与构建产物一致时直接跳过（增量构建）。
 # 用法：gradle 构建自动调用（yuyansdk/build.gradle 的 prepareLibrime 任务）；
 #       也可手动执行：powershell -File third_party/scripts/build-librime.ps1
+param(
+    [switch]$Force  # 强制重新编译（librime.so 已存在时默认跳过，幂等）
+)
+
 $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $buildDir = Join-Path $root 'third_party\build-android'
 $targetSo = Join-Path $root 'yuyansdk\libs\arm64-v8a\librime.so'
 
-# 1. 目标已存在 → 跳过（不重复编译）
-if (Test-Path $targetSo) {
-    Write-Host "[build-librime] librime.so 已存在，跳过编译: $targetSo"
+# 0. 联想插件 librime-predict（submodule 在 third_party/ 下）：以 junction 挂到
+#    librime/plugins/ 下，供 librime 的插件发现机制（GLOB）编入 rime-static。
+$pluginSrc = Join-Path $root 'third_party\librime-predict'
+$pluginLink = Join-Path $root 'third_party\librime\plugins\librime-predict'
+if (Test-Path $pluginSrc) {
+    if (Test-Path $pluginLink) {
+        # 已存在：确认指向正确（避免悬空/错位链接）
+        $item = Get-Item $pluginLink -Force -ErrorAction SilentlyContinue
+        if (-not $item.LinkType) {
+            Write-Host "[build-librime] 插件路径 $pluginLink 已存在但非链接，删除重建"
+            Remove-Item $pluginLink -Recurse -Force
+        } else { Write-Host "[build-librime] 插件链接已存在: $pluginLink" }
+    }
+    if (-not (Test-Path $pluginLink)) {
+        New-Item -ItemType Junction -Path $pluginLink -Target $pluginSrc | Out-Null
+        Write-Host "[build-librime] 已创建插件链接: $pluginLink -> $pluginSrc"
+    }
+} else {
+    Write-Error "[build-librime] 缺少联想插件源码: $pluginSrc（需 git submodule update --init third_party/librime-predict）"
+}
+
+# 1. 目标已存在 → 跳过（不重复编译）；-Force 强制重编
+if ((Test-Path $targetSo) -and -not $Force) {
+    Write-Host "[build-librime] librime.so 已存在，跳过编译: $targetSo（-Force 强制重编）"
     exit 0
 }
 

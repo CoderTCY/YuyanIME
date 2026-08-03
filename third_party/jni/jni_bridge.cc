@@ -11,7 +11,9 @@
 //     且 kLockMask 会触发 ascii_composer 行为——中文方案统一归一化为小写并清除大小写修饰；
 //     英文方案保留大小写（english schema 的 speller 按大小写匹配）
 //  4. 联想词（getRimeAssociateList/selectRimeAssociate）：官方 librime 无此 API，
-//     返回空；联想由 app 层 CustomEngine 提供
+//     由 librime-predict 插件（PredictEngine）查询 predict.db 提供；动态学习：
+//     基于 commit_history（分词后的提交词序列）增量统计 bigram（上屏词→下屏词），
+//     落盘 user_predict.txt，查询时动态数据优先；app 层 CustomEngine 兜底。
 //  5. setRimePageSize：no-op——候选页大小由重建后的 schema yaml 的 menu/page_size 配置
 //  6. getRimeKeycodeByName：自建 X11 keysym 映射表（app 仅用 Page_Down/BackSpace）
 
@@ -23,10 +25,21 @@
 // 不 include rime_api_impl.h 以避免与 rime_api.cc 重复定义）
 #include <rime/service.h>
 #include <rime/context.h>
+#include <rime/commit_history.h>  // CommitRecord：联想提交补记 history
+#include <rime/schema.h>  // AcquirePredictEngine 中访问 schema_id
 #include <rime/key_table.h>  // kShiftMask/kLockMask 等修饰位
 
+// 联想词：librime-predict 插件（PredictEngine + PredictDb，已合并编入 rime-static）
+#include "predict_engine.h"
+#include <rime/resource.h>
+
+#include <algorithm>
+#include <chrono>
 #include <cstring>
+#include <fstream>
+#include <map>
 #include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // 全局状态
@@ -36,6 +49,32 @@ static RimeApi* g_api = nullptr;
 static RimeSessionId g_session = 0;
 static bool g_initialized = false;
 static std::string g_schema_id;  // 当前 schema id（英文大小写判断用）
+
+// 联想词状态（librime-predict）
+static const rime::ResourceType kPredictDbResourceType = {"predict_db", "", ""};
+static rime::PredictEngine* g_predict_engine = nullptr;  // 按 schema 缓存
+static std::string g_predict_schema_id;
+static std::vector<std::string> g_associate_words;  // 最近一次联想候选
+static int g_pending_associate = -1;  // 待提交的联想词索引（getRimeCommit 消费）
+
+// 用户联想学习（对齐 fcitx5/libime 的 HistoryBigram 语义，轻量版）：
+// 提交词序列（commit_history）→ 相邻词对 bigram（上屏词→下屏词）增量统计；
+// 句子边界：librime 在 Return/BackSpace 时自动清空 history（天然断句），
+// 另补超时（跨输入框/长停顿）与句末标点两种边界，防跨句串学；
+// 容量上限 kMaxUserBigramEntries（落盘时按频率截断），落盘 user_predict.txt
+static std::map<std::string, std::map<std::string, int>> g_user_bigrams;
+static bool g_user_bigrams_dirty = false;
+static int64_t g_last_user_bigrams_save = 0;  // 上次落盘时间（毫秒，节流用）
+static int64_t g_last_commit_time = 0;  // 上次提交时间（毫秒，超时断句用）
+static bool g_sentence_broken = false;  // 句末标点后置位：下一提交的 prev 失效
+static const int64_t kSentenceTimeoutMs = 60000;  // 提交间隔超 60s 视为新句
+static const size_t kMaxUserBigramEntries = 20000;  // 学习数据容量上限
+
+// 前向声明：定义见下方“用户联想学习”区（startupRime/exitRime 先于定义使用）
+static void LoadUserBigrams();
+static void SaveUserBigrams();
+static void LearnFromHistory(const rime::CommitHistory& history);
+static void MaybeSaveUserBigrams();
 
 // Java 数据类缓存（startup 时初始化）
 struct JniCache {
@@ -148,6 +187,8 @@ Java_com_yuyan_inputmethod_core_Rime_startupRime(JNIEnv* env, jclass,
 
   InitJniCache(env);
   g_initialized = true;
+
+  LoadUserBigrams();  // 加载历史学习数据（user_predict.txt）
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -161,6 +202,16 @@ Java_com_yuyan_inputmethod_core_Rime_exitRime(JNIEnv* /*env*/, jclass) {
   g_api = nullptr;
   g_initialized = false;
   g_schema_id.clear();
+  SaveUserBigrams();  // 落盘学习数据（内部有 dirty 检查）
+  g_user_bigrams.clear();
+  g_user_bigrams_dirty = false;
+  g_last_commit_time = 0;
+  g_sentence_broken = false;
+  delete g_predict_engine;
+  g_predict_engine = nullptr;
+  g_predict_schema_id.clear();
+  g_associate_words.clear();
+  g_pending_associate = -1;
 }
 
 // 候选页大小由 schema yaml 的 menu/page_size 配置（重建 schema 时设为 100），no-op
@@ -249,9 +300,37 @@ Java_com_yuyan_inputmethod_core_Rime_setRimeOption(JNIEnv* env, jclass,
 
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_yuyan_inputmethod_core_Rime_getRimeCommit(JNIEnv* env, jclass) {
+  // 联想词提交：selectRimeAssociate 选中的预测词直接作为 commit 返回（一次性消费）
+  if (g_pending_associate >= 0 && (size_t)g_pending_associate < g_associate_words.size()) {
+    const std::string& word = g_associate_words[g_pending_associate];
+    jstring text = ToJString(env, word.c_str());
+    jobject obj = env->NewObject(g_jni.Cls_RimeCommit, g_jni.Ctor_RimeCommit, text);
+    env->DeleteLocalRef(text);
+    g_pending_associate = -1;
+    // 联想提交不经过引擎（commit_history 不会更新）——手动补记并学习
+    if (g_session != 0) {
+      if (auto session = rime::Service::instance().GetSession(g_session)) {
+        if (auto* ctx = session->context()) {
+          ctx->commit_history().Push(rime::CommitRecord{"raw", word});
+          LearnFromHistory(ctx->commit_history());
+          MaybeSaveUserBigrams();
+        }
+      }
+    }
+    return obj;
+  }
   if (!g_api || g_session == 0) return nullptr;
   RIME_STRUCT(RimeCommit, commit);
   if (!g_api->get_commit(g_session, &commit)) return nullptr;  // 消费式：取后引擎清空
+  // 引擎提交已把本次文本 Push 进 commit_history（OnCommit 先 Push 再 sink）——学习 bigram
+  if (commit.text && commit.text[0] != '\0') {
+    if (g_session != 0) {
+      if (auto session = rime::Service::instance().GetSession(g_session)) {
+        if (auto* ctx = session->context()) LearnFromHistory(ctx->commit_history());
+      }
+    }
+    MaybeSaveUserBigrams();
+  }
   jstring text = ToJString(env, commit.text);
   jobject obj = env->NewObject(g_jni.Cls_RimeCommit, g_jni.Ctor_RimeCommit, text);
   env->DeleteLocalRef(text);
@@ -398,21 +477,228 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeKeycodeByName(JNIEnv* env, jclass,
 }
 
 // ---------------------------------------------------------------------------
-// 联想词：官方 librime 无联想 API（getRimeAssociateList/selectRimeAssociate 是
-// yuyan 定制引擎的私有扩展）。返回空/失败，联想词由 app 层 CustomEngine 提供。
+// 用户联想学习（借鉴 fcitx5/libime 的 UserLanguageModel 思路，轻量 bigram 版）
 // ---------------------------------------------------------------------------
+
+// user_predict.txt 路径：用户数据目录（与 predict.db 同目录）
+static std::string UserPredictPath() {
+  return (rime::Service::instance().deployer().user_data_dir / "user_predict.txt").string();
+}
+
+// 汉字开头（UTF-8 首字节 E4~E9 覆盖常用汉字区）——只学中文词对，过滤英文/标点
+static bool StartsWithHan(const std::string& s) {
+  if (s.empty()) return false;
+  unsigned char c = (unsigned char)s[0];
+  return c >= 0xE4 && c <= 0xE9;
+}
+
+static int64_t NowMs() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+// 句末标点（。！？；…）——UTF-8 尾字节匹配
+static bool EndsSentence(const std::string& s) {
+  if (s.size() < 3) return false;
+  const size_t n = s.size();
+  const char* t = s.c_str() + n - 3;
+  if (std::memcmp(t, "\xE3\x80\x82", 3) == 0) return true;  // 。
+  if (std::memcmp(t, "\xEF\xBC\x81", 3) == 0) return true;  // ！
+  if (std::memcmp(t, "\xEF\xBC\x9F", 3) == 0) return true;  // ？
+  if (std::memcmp(t, "\xEF\xBC\x9B", 3) == 0) return true;  // ；
+  if (std::memcmp(t, "\xE2\x80\xA6", 3) == 0) return true;  // …
+  return false;
+}
+
+static void LoadUserBigrams() {
+  g_user_bigrams.clear();
+  std::ifstream in(UserPredictPath());
+  if (!in) return;
+  std::string line;
+  while (std::getline(in, line)) {
+    if (line.empty()) continue;
+    size_t t1 = line.find('\t');
+    if (t1 == std::string::npos) continue;
+    size_t t2 = line.find('\t', t1 + 1);
+    if (t2 == std::string::npos) continue;
+    std::string key = line.substr(0, t1);
+    std::string value = line.substr(t1 + 1, t2 - t1 - 1);
+    int count = atoi(line.c_str() + t2 + 1);
+    if (key.empty() || value.empty() || count <= 0) continue;
+    g_user_bigrams[key][value] += count;
+  }
+}
+
+static void SaveUserBigrams() {
+  if (!g_user_bigrams_dirty) return;
+  // 容量控制：总对数超限时按频率降序保留前 kMaxUserBigramEntries（防无限增长）
+  size_t total = 0;
+  for (const auto& kv : g_user_bigrams) total += kv.second.size();
+  if (total > kMaxUserBigramEntries) {
+    // (count, value, key) 全量收集后排序截断，再重建 map
+    std::vector<std::pair<int, std::pair<std::string, std::string>>> all;
+    all.reserve(total);
+    for (const auto& kv : g_user_bigrams) {
+      for (const auto& vc : kv.second) {
+        all.emplace_back(vc.second, std::make_pair(vc.first, kv.first));
+      }
+    }
+    std::sort(all.begin(), all.end(),
+              [](const auto& a, const auto& b) { return a.first > b.first; });
+    all.resize(kMaxUserBigramEntries);
+    g_user_bigrams.clear();
+    for (const auto& e : all) g_user_bigrams[e.second.second][e.second.first] = e.first;
+  }
+  std::ofstream out(UserPredictPath());
+  if (!out) return;
+  for (const auto& kv : g_user_bigrams) {
+    for (const auto& vc : kv.second) {
+      out << kv.first << '\t' << vc.first << '\t' << vc.second << '\n';
+    }
+  }
+  g_user_bigrams_dirty = false;
+}
+
+// 落盘节流：距上次保存超过 60s 才写（查询/提交路径频繁，避免每击必写）
+static void MaybeSaveUserBigrams() {
+  int64_t now = NowMs();
+  if (now - g_last_user_bigrams_save < 60000) return;
+  g_last_user_bigrams_save = now;
+  SaveUserBigrams();
+}
+
+// 从 commit_history（librime 分词后的提交词序列）学习：最后两个有效记录 → bigram。
+// 边界处理：① Return/BackSpace 由 librime 清空 history（天然断句，prev 自动失效）
+// ② 提交间隔超时（跨输入框/长停顿）视为新句 ③ 句末标点后置 g_sentence_broken
+static void LearnFromHistory(const rime::CommitHistory& history) {
+  int64_t now = NowMs();
+  bool timeout = (g_last_commit_time > 0 && now - g_last_commit_time > kSentenceTimeoutMs);
+  g_last_commit_time = now;
+  std::string prev, cur;
+  for (auto it = history.rbegin(); it != history.rend(); ++it) {
+    if (it->type == "thru" || it->text.empty()) continue;  // 跳过按键直通记录
+    if (cur.empty()) {
+      cur = it->text;
+    } else {
+      prev = it->text;
+      break;
+    }
+  }
+  if (cur.empty()) return;
+  // 超时断句或上句以句末标点结束：prev 失效，只记当前词
+  if (timeout || g_sentence_broken) {
+    g_sentence_broken = false;
+    prev.clear();
+  }
+  if (!prev.empty() && StartsWithHan(prev) && StartsWithHan(cur)) {
+    g_user_bigrams[prev][cur]++;
+    g_user_bigrams_dirty = true;
+  }
+  // 句末标点结尾：后续提交不再与当前词成对
+  if (EndsSentence(cur)) g_sentence_broken = true;
+}
+
+// ---------------------------------------------------------------------------
+// 联想词：官方 librime 无联想 API（getRimeAssociateList/selectRimeAssociate 是
+// yuyan 定制引擎的私有扩展）。由 librime-predict 插件提供：PredictEngine 查询
+// predict.db（用户/共享数据目录，精确匹配；查不到时按 UTF-8 码点做后缀回退）。
+// 动态学习数据（user_predict.txt）优先，静态 predict.db 补充，去重合并。
+// 选中候选后由 getRimeCommit 以 pending 方式直接返回预测词，app 层提交上屏。
+// ---------------------------------------------------------------------------
+
+// 按当前 schema 获取/缓存 PredictEngine（predict.db 加载失败返回 nullptr）
+static rime::PredictEngine* AcquirePredictEngine() {
+  if (!g_initialized || g_session == 0) return nullptr;
+  auto session = rime::Service::instance().GetSession(g_session);
+  if (!session || !session->schema()) return nullptr;
+  const std::string schema_id = session->schema()->schema_id();
+  if (g_predict_engine && g_predict_schema_id == schema_id) return g_predict_engine;
+  // schema 变化（或首次）：重建引擎（user 目录优先，shared 目录兜底）
+  delete g_predict_engine;
+  g_predict_engine = nullptr;
+  g_predict_schema_id.clear();
+  rime::FallbackResourceResolver resolver(kPredictDbResourceType);
+  resolver.set_root_path(rime::Service::instance().deployer().user_data_dir);
+  resolver.set_fallback_root_path(rime::Service::instance().deployer().shared_data_dir);
+  rime::path db_path = resolver.ResolvePath("predict.db");
+  auto db = rime::New<rime::PredictDb>(db_path);
+  if (!db->Load()) return nullptr;
+  // max_iterations=0 不限连续预测次数；max_candidates=0 返回全部候选（app 层再截取）
+  g_predict_engine = new rime::PredictEngine(db, 0, 0);
+  g_predict_schema_id = schema_id;
+  return g_predict_engine;
+}
 
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_yuyan_inputmethod_core_Rime_getRimeAssociateList(JNIEnv* env, jclass,
-                                                          jstring /*key*/) {
+                                                          jstring key) {
   jclass strCls = env->FindClass("java/lang/String");
-  jobjectArray arr = env->NewObjectArray(0, strCls, nullptr);
+  g_associate_words.clear();
+  if (key) {
+    const char* text = env->GetStringUTFChars(key, nullptr);
+    if (text) {
+      rime::PredictEngine* engine = AcquirePredictEngine();
+      std::string query = text;
+      // 预测 key 为词级（如“就”“今天”），光标前文本可能是完整句子——
+      // 整串精确匹配失败时按 UTF-8 码点去掉前缀字符逐级回退（如“我们今天就”→“就”）；
+      // 每级先查动态学习数据（用户习惯优先，按出现次数降序），再查静态 predict.db 补充
+      while (!query.empty()) {
+        bool hit = false;
+        // ① 动态：用户 bigram 学习数据（最多 5 条，保持与候选栏显示量一致）
+        auto dit = g_user_bigrams.find(query);
+        if (dit != g_user_bigrams.end()) {
+          std::vector<std::pair<std::string, int>> items(dit->second.begin(),
+                                                         dit->second.end());
+          std::sort(items.begin(), items.end(),
+                    [](const auto& a, const auto& b) { return a.second > b.second; });
+          for (const auto& iv : items) {
+            g_associate_words.push_back(iv.first);
+            if (g_associate_words.size() >= 5) break;
+          }
+          hit = true;
+        }
+        // ② 静态：predict.db（补充动态未覆盖的词，去重，总上限 10）
+        if (engine && engine->Predict(nullptr, query)) {
+          int n = engine->num_candidates();
+          for (int i = 0; i < n; ++i) {
+            const std::string w = engine->candidate(i);
+            if (std::find(g_associate_words.begin(), g_associate_words.end(), w) ==
+                g_associate_words.end()) {
+              g_associate_words.push_back(w);
+              if (g_associate_words.size() >= 10) break;
+            }
+          }
+          hit = true;
+        }
+        if (hit) break;
+        // 去掉第一个 UTF-8 码点后继续回退
+        size_t first = 1;
+        unsigned char c = (unsigned char)query[0];
+        if (c >= 0xF0) first = 4;
+        else if (c >= 0xE0) first = 3;
+        else if (c >= 0xC0) first = 2;
+        if (first >= query.size()) break;
+        query = query.substr(first);
+      }
+      env->ReleaseStringUTFChars(key, text);
+    }
+  }
+  jobjectArray arr =
+      env->NewObjectArray((jsize)g_associate_words.size(), strCls, nullptr);
+  for (size_t i = 0; i < g_associate_words.size(); ++i) {
+    jstring s = ToJString(env, g_associate_words[i].c_str());
+    env->SetObjectArrayElement(arr, (jsize)i, s);
+    env->DeleteLocalRef(s);
+  }
   env->DeleteLocalRef(strCls);
   return arr;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_yuyan_inputmethod_core_Rime_selectRimeAssociate(JNIEnv* /*env*/, jclass,
-                                                         jint /*index*/) {
-  return JNI_FALSE;
+                                                         jint index) {
+  if (index < 0 || (size_t)index >= g_associate_words.size()) return JNI_FALSE;
+  g_pending_associate = index;  // 下次 getRimeCommit 时直接返回该预测词
+  return JNI_TRUE;
 }

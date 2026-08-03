@@ -54,7 +54,12 @@ include(OpenccWorkarounds)
 set(X11Keysym "${CMAKE_CURRENT_SOURCE_DIR}/librime/include")
 include_directories("${X11Keysym}")
 
-# librime 本体：静态库 rime-static（不启用外部插件 lua/octagram/predict）
+# librime-predict 依赖 darts-clone（header-only）：必须在 add_subdirectory(librime)
+# 之前声明，插件源码（librime/plugins/ 下编译）才能继承该 include 路径
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/darts-clone")
+
+# librime 本体：静态库 rime-static（外部插件经 librime/plugins 机制编入；
+# 联想插件 librime-predict 由 build-librime.ps1 以 junction 挂到 librime/plugins/ 下）
 option(BUILD_TEST "" OFF)
 option(BUILD_STATIC "" ON)
 option(ENABLE_EXTERNAL_PLUGINS "" OFF)

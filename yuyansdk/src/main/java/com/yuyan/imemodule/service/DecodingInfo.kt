@@ -2,6 +2,7 @@ package com.yuyan.imemodule.service
 
 import android.view.KeyEvent
 import androidx.lifecycle.MutableLiveData
+import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.inputmethod.core.CandidateListItem
 import com.yuyan.inputmethod.core.Kernel
 
@@ -102,10 +103,16 @@ object DecodingInfo {
         if(!isEngineFinish || isAssociate) { // Rime和联想
             if (candId >= 0) Kernel.getWordSelectedWord(candId)
             val newCandidates = Kernel.candidates
-            // 上屏文本优先取点击候选的显示文本（显示形态=提交形态，避免引擎 commitText 大小写不可控），
-            // 无对应候选（未指定索引等）时回退引擎 commitText
+            // 上屏文本：中文模式引擎 commitText 优先——段确认时提交的是整句
+            // （如 ce'shi 选"测"再选"试"，引擎提交"测试"），点击候选的显示文本只是其中一段；
+            // 英文模式保持显示形态优先（避免引擎 commitText 大小写不可控）；
+            // commitText 为空（无提交，如联想词越界走缓存）时回退点击候选的显示文本
             val chosenText = if (candId in 0..<candidateSize) candidatesLiveData.value!![candId].text else ""
-            candidate = if (chosenText.isNotEmpty()) chosenText else Kernel.commitText
+            candidate = if (InputModeSwitcher.isEnglish) {
+                if (chosenText.isNotEmpty()) chosenText else Kernel.commitText
+            } else {
+                Kernel.commitText.ifEmpty { chosenText }
+            }
             candidatesLiveData.value = newCandidates
         } else {  // 手写
             candidate = if (candId in 0..<candidateSize) candidatesLiveData.value!![candId].text  else ""

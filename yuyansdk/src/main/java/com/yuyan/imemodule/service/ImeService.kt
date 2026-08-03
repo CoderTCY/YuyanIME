@@ -87,7 +87,15 @@ class ImeService : InputMethodService() {
     }
 
     override fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
-        if (isSoftKeyboard)mInputView.onStartInputView(editorInfo, restarting)
+        // 系统调用 onStartInputView 即代表软键盘视图已显示（InputView 已创建），
+        // 此时必须按软键盘模式处理；否则硬件键盘判定（外接键盘存在时 isSoftKeyboard=false）
+        // 会导致键盘容器永不初始化，弹出空白键盘。
+        if (!isSoftKeyboard) {
+            isSoftKeyboard = true
+            isHardwareKeyboard = false
+            setCandidatesViewShown(false)
+        }
+        mInputView.onStartInputView(editorInfo, restarting)
         super.onStartInputView(editorInfo, restarting)
     }
 

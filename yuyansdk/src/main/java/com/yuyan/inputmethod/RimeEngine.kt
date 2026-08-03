@@ -93,6 +93,7 @@ object RimeEngine {
 
     fun predictAssociationWords(text: String) {
         pinyins = emptyArray()
+        customPhraseSize = 0  // 联想列表无📋前缀，索引与 rime 候选直接对齐，防止残留值错位
         if (text.isNotEmpty()) {
             showCandidates = buildList {
                 val words = Rime.getAssociateList(text)
@@ -109,8 +110,9 @@ object RimeEngine {
     fun selectAssociation(index: Int) {
         val indexReal = index - customPhraseSize
         Rime.chooseAssociate(indexReal)
+        // updateCandidatesOrCommitText 已消费 pending 并设置 preCommitText（联想词），
+        // 此处不再覆盖（此前误用已清空的 showCandidates 取值导致联想词丢失）
         updateCandidatesOrCommitText()
-        preCommitText = showCandidates.getOrNull(indexReal)?.text?:""
     }
 
     fun reset() {

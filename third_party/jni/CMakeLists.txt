@@ -8,4 +8,6 @@ target_include_directories(rime PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../librime/src"
   "${CMAKE_BINARY_DIR}/librime/src"
   "${Opencc_INCLUDE_PATH}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../librime/include")
+  "${CMAKE_CURRENT_SOURCE_DIR}/../librime/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../librime-predict/src"  # 联想插件（PredictEngine）
+  "${CMAKE_CURRENT_SOURCE_DIR}/../darts-clone")  # librime-predict 依赖（header-only）

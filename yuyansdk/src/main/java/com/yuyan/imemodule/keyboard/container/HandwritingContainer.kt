@@ -19,6 +19,7 @@ import com.yuyan.imemodule.entity.keyboard.SoftKey
 import com.yuyan.imemodule.manager.InputModeSwitcher
 import com.yuyan.imemodule.singleton.EnvironmentSingleton
 import com.yuyan.imemodule.utils.AppUtil
+import com.yuyan.imemodule.utils.DevicesUtils
 import com.yuyan.imemodule.utils.KeyboardLoaderUtil.Companion.instance
 import com.yuyan.imemodule.keyboard.InputView
 import com.yuyan.imemodule.keyboard.HandwritingKeyboard
@@ -103,6 +104,9 @@ class HandwritingContainer(context: Context?, inputView: InputView) : InputBaseC
         mRVRightSymbols.setOnItemClickListener{ _: View?, position: Int ->
             val symbol = mSideSymbolsPinyin.map { it.symbolValue }[position]
             val softKey = SoftKey(label = symbol)
+            // 播放按键声音和震动
+            DevicesUtils.tryPlayKeyDown()
+            DevicesUtils.tryVibrate(this)
             inputView.responseKeyEvent(softKey)
         }
         mRVRightSymbols.setAdapter(adapter)

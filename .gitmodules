@@ -4,3 +4,9 @@
 [submodule "third_party/snappy"]
 	path = third_party/snappy
 	url = https://github.com/google/snappy.git
+[submodule "third_party/librime-predict"]
+	path = third_party/librime-predict
+	url = https://github.com/rime/librime-predict
+[submodule "third_party/darts-clone"]
+	path = third_party/darts-clone
+	url = https://github.com/s-yata/darts-clone

@@ -6,9 +6,8 @@
 
 1. **手写输入模型更新**。
 2. **引擎替换为原版 librime**：原有的闭源 `libyuyanime.so` 换成原版 librime（submodule，版本锁定），集成[雾凇拼音](https://github.com/iDvel/rime-ice)全量词库（810w）。
-3. **候选词预测系统**：集成 [librime-predict](https://github.com/rime/librime-predict)，预测库为**简繁双向**（官方统计源繁→简 + 自动 s→t 繁体集 + rime-predict-zh 补充，约 96 万条目，见 `tools/make_predict_db/`）。
-4. **动态学习**：基于 commit_history 的 bigram 统计（对齐 libime HistoryBigram 语义），用户输入自动学习联想词，落盘 `user_predict.txt`。
-5. **修复**：拼音段确认连续选候选只上屏最后一个、手写键盘右侧符号栏按键音、模拟器软键盘空白等。
+3. **候选词预测系统**：集成 [librime-predict](https://github.com/rime/librime-predict)，预测库为**简繁双向**（官方统计源繁→简 + 自动 s→t 繁体集 + rime-predict-zh 补充，约 96 万条目）。
+4. **动态学习**：基于 commit_history 的 bigram 统计，用户输入自动学习联想词，落盘 `user_predict.txt`。
 
 ## 构建
 
@@ -22,7 +21,3 @@ powershell -File third_party/scripts/build-librime.ps1
 # 构建 release APK（需要 JDK 21 + Android SDK + NDK）
 gradlew.bat :app:assembleOfflineRelease
 ```
-
-## 许可证
-
-GPL-3.0（与上游一致）。

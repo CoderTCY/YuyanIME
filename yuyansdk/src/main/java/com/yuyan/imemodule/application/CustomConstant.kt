@@ -17,10 +17,10 @@ object CustomConstant {
     const val SCHEMA_ZH_STROKE = "stroke" // 五笔画
     const val CURRENT_RIME_DICT_DATA_VERSIOM = 20260802 // rime-ice 全量词库（810w）
     const val CURRENT_HW_DICT_DATA_VERSIOM = 20260801 // 手写模型库版本，独立于 RIME 字库版本
-    const val CURRENT_PREDICT_DB_DATA_VERSION = 20260804 // 联想预测词库版本（官方源+rime-predict-zh merged 合并库，tools/make_predict_db 生成）
-    const val YUYAN_IME_REPO = "https://github.com/gurecn/YuyanIme"
+    const val CURRENT_PREDICT_DB_DATA_VERSION = 20260804 // 联想预测词库版本（简繁双向：官方源繁→简 + s→t 繁体集 + rime-predict-zh，tools/make_predict_db 生成）
+    const val YUYAN_IME_REPO = "https://github.com/CoderTCY/YuyanIme"
     const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
-    const val FEEDBACK_TXC_REPO = "https://github.com/gurecn/YuyanIme/issues"
+    const val FEEDBACK_TXC_REPO = "https://github.com/CoderTCY/YuyanIme/issues"
 
     // 花漾字状态
     var flowerTypeface = FlowerTypefaceMode.Disabled

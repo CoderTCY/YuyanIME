@@ -47,33 +47,26 @@ if ((Test-Path $targetSo) -and -not $Force) {
     exit 0
 }
 
-# 2. 定位 NDK：CI 环境变量优先，其次复用 CMake cache，再从本地 SDK 定位。
+# 2. 定位 NDK：优先读 CMakeCache（已配置过），否则从 local.properties 的 sdk.dir 找最新 NDK
 $ndkToolchain = $null
-$ndkRoot = if ($env:ANDROID_NDK_HOME) { $env:ANDROID_NDK_HOME } else { $env:ANDROID_NDK_ROOT }
-if ($ndkRoot) {
-    $candidate = Join-Path $ndkRoot 'build\cmake\android.toolchain.cmake'
-    if (Test-Path $candidate) { $ndkToolchain = $candidate }
-}
-if (-not $ndkToolchain -and (Test-Path (Join-Path $buildDir 'CMakeCache.txt'))) {
+if (Test-Path (Join-Path $buildDir 'CMakeCache.txt')) {
     $m = Select-String -Path (Join-Path $buildDir 'CMakeCache.txt') -Pattern '^CMAKE_TOOLCHAIN_FILE:UNINITIALIZED=(.+)$'
     if ($m) { $ndkToolchain = $m.Matches[0].Groups[1].Value }
 }
 if (-not $ndkToolchain) {
-    $sdk = $null
     $props = Join-Path $root 'local.properties'
     if (Test-Path $props) {
         $m = Select-String -Path $props -Pattern '^sdk\.dir=(.+)$'
-        if ($m) { $sdk = $m.Matches[0].Groups[1].Value -replace '\\', '\' }
-    }
-    if (-not $sdk) { $sdk = if ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { $env:ANDROID_HOME } }
-    if ($sdk) {
-        $ndk = Get-ChildItem (Join-Path $sdk 'ndk') -Directory -ErrorAction SilentlyContinue |
-            Sort-Object Name -Descending | Select-Object -First 1
-        if ($ndk) { $ndkToolchain = Join-Path $ndk.FullName 'build\cmake\android.toolchain.cmake' }
+        if ($m) {
+            $sdk = $m.Matches[0].Groups[1].Value -replace '\\', '\'
+            $ndk = Get-ChildItem (Join-Path $sdk 'ndk') -Directory -ErrorAction SilentlyContinue |
+                Sort-Object Name -Descending | Select-Object -First 1
+            if ($ndk) { $ndkToolchain = Join-Path $ndk.FullName 'build\cmake\android.toolchain.cmake' }
+        }
     }
 }
 if (-not $ndkToolchain) {
-    Write-Error "[build-librime] 找不到 NDK（需 ANDROID_NDK_HOME、local.properties 或 Android SDK）"
+    Write-Error "[build-librime] 找不到 NDK（需 local.properties 配置 sdk.dir，或已配置过 CMakeCache）"
 }
 
 # 3. configure（仅首次/缓存缺失时）

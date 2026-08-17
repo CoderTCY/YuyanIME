@@ -122,8 +122,7 @@ makeaar.dependsOn(build)
 // librime.so 不进仓库：构建时由脚本自动编译生成（存在则跳过，幂等）
 tasks.register('prepareLibrime', Exec) {
     workingDir rootProject.projectDir
-    def powerShell = System.getProperty('os.name').toLowerCase().contains('windows') ? 'powershell' : 'pwsh'
-    commandLine powerShell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+    commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
             'third_party/scripts/build-librime.ps1'
 }
 

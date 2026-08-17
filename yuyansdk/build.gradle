@@ -71,7 +71,7 @@ android {
     }
     sourceSets {
         offline {
-            jniLibs.srcDirs = ['libs']
+            jniLibs.srcDirs = ['libs', "$buildDir/generated/rime-jniLibs"]
         }
     }
 

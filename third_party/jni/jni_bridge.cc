@@ -54,8 +54,9 @@ static std::string g_schema_id;  // 当前 schema id（英文大小写判断用�
 static const rime::ResourceType kPredictDbResourceType = {"predict_db", "", ""};
 static rime::PredictEngine* g_predict_engine = nullptr;  // 按 schema 缓存
 static std::string g_predict_schema_id;
-static std::vector<std::string> g_associate_words;  // 最近一次联想候选
+static std::vector<std::string> g_associate_words;  // 最近一次联想候选（app 可整体写回以对齐显示列表）
 static int g_pending_associate = -1;  // 待提交的联想词索引（getRimeCommit 消费）
+static std::vector<int> g_candidate_index_map;  // 显示位置 → rime 候选索引（setCandidateIndexMap 写入，-1 为 app 自定义项）
 
 // 用户联想学习（对齐 fcitx5/libime 的 HistoryBigram 语义，轻量版）：
 // 提交词序列（commit_history）→ 相邻词对 bigram（上屏词→下屏词）增量统计；
@@ -212,6 +213,7 @@ Java_com_yuyan_inputmethod_core_Rime_exitRime(JNIEnv* /*env*/, jclass) {
   g_predict_schema_id.clear();
   g_associate_words.clear();
   g_pending_associate = -1;
+  g_candidate_index_map.clear();
 }
 
 // 候选页大小由 schema yaml 的 menu/page_size 配置（重建 schema 时设为 100），no-op
@@ -280,7 +282,13 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_yuyan_inputmethod_core_Rime_selectRimeCandidate(JNIEnv* /*env*/, jclass,
                                                          jint index) {
   if (!g_api || g_session == 0) return JNI_FALSE;
-  return g_api->select_candidate(g_session, (size_t)index) ? JNI_TRUE : JNI_FALSE;
+  // 显示位置 → rime 原始候选索引：app 更新候选时同步 setCandidateIndexMap/appendCandidateIndexMap，
+  // 映射缺失时恒等兜底；-1 表示 app 自定义项（📋/echo 等），不经过引擎
+  int real = index;
+  if (index >= 0 && (size_t)index < g_candidate_index_map.size())
+    real = g_candidate_index_map[index];
+  if (real < 0) return JNI_FALSE;
+  return g_api->select_candidate(g_session, (size_t)real) ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -298,6 +306,17 @@ Java_com_yuyan_inputmethod_core_Rime_setRimeOption(JNIEnv* env, jclass,
 // 查询
 // ---------------------------------------------------------------------------
 
+static void RecordExternalCommit(const std::string& text) {
+  if (text.empty() || g_session == 0) return;
+  if (auto session = rime::Service::instance().GetSession(g_session)) {
+    if (auto* ctx = session->context()) {
+      ctx->commit_history().Push(rime::CommitRecord{"raw", text});
+      LearnFromHistory(ctx->commit_history());
+      MaybeSaveUserBigrams();
+    }
+  }
+}
+
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_yuyan_inputmethod_core_Rime_getRimeCommit(JNIEnv* env, jclass) {
   // 联想词提交：selectRimeAssociate 选中的预测词直接作为 commit 返回（一次性消费）
@@ -308,15 +327,7 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeCommit(JNIEnv* env, jclass) {
     env->DeleteLocalRef(text);
     g_pending_associate = -1;
     // 联想提交不经过引擎（commit_history 不会更新）——手动补记并学习
-    if (g_session != 0) {
-      if (auto session = rime::Service::instance().GetSession(g_session)) {
-        if (auto* ctx = session->context()) {
-          ctx->commit_history().Push(rime::CommitRecord{"raw", word});
-          LearnFromHistory(ctx->commit_history());
-          MaybeSaveUserBigrams();
-        }
-      }
-    }
+    RecordExternalCommit(word);
     return obj;
   }
   if (!g_api || g_session == 0) return nullptr;
@@ -336,6 +347,16 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeCommit(JNIEnv* env, jclass) {
   env->DeleteLocalRef(text);
   g_api->free_commit(&commit);
   return obj;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_yuyan_inputmethod_core_Rime_recordRimeExternalCommit(JNIEnv* env, jclass,
+                                                              jstring text) {
+  if (!text) return;
+  const char* raw = env->GetStringUTFChars(text, nullptr);
+  if (!raw) return;
+  RecordExternalCommit(raw);
+  env->ReleaseStringUTFChars(text, raw);
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -701,4 +722,54 @@ Java_com_yuyan_inputmethod_core_Rime_selectRimeAssociate(JNIEnv* /*env*/, jclass
   if (index < 0 || (size_t)index >= g_associate_words.size()) return JNI_FALSE;
   g_pending_associate = index;  // 下次 getRimeCommit 时直接返回该预测词
   return JNI_TRUE;
+}
+
+// 联想词表整体写回：app 拼好的最终显示列表（含标点/日期等自定义项）与选择索引对齐，
+// selectRimeAssociate(index) 按下标取词即得显示文本，杜绝 Kotlin 拼接与 JNI 词表错位
+extern "C" JNIEXPORT void JNICALL
+Java_com_yuyan_inputmethod_core_Rime_setAssociateWords(JNIEnv* env, jclass,
+                                                       jobjectArray words) {
+  g_associate_words.clear();
+  g_pending_associate = -1;
+  if (!words) return;
+  jsize len = env->GetArrayLength(words);
+  g_associate_words.reserve((size_t)len);
+  for (jsize i = 0; i < len; ++i) {
+    jstring s = (jstring)env->GetObjectArrayElement(words, i);
+    if (!s) continue;
+    const char* utf = env->GetStringUTFChars(s, nullptr);
+    if (utf) {
+      g_associate_words.emplace_back(utf);
+      env->ReleaseStringUTFChars(s, utf);
+    }
+    env->DeleteLocalRef(s);
+  }
+}
+
+// 候选索引映射（整体替换）：显示位置 → rime 原始候选索引，-1 为 app 自定义项（📋/echo）
+extern "C" JNIEXPORT void JNICALL
+Java_com_yuyan_inputmethod_core_Rime_setCandidateIndexMap(JNIEnv* env, jclass,
+                                                          jintArray map) {
+  g_candidate_index_map.clear();
+  if (!map) return;
+  jsize len = env->GetArrayLength(map);
+  g_candidate_index_map.reserve((size_t)len);
+  const jint* elems = env->GetIntArrayElements(map, nullptr);
+  if (elems) {
+    for (jsize i = 0; i < len; ++i) g_candidate_index_map.push_back(elems[i]);
+    env->ReleaseIntArrayElements(map, const_cast<jint*>(elems), JNI_ABORT);
+  }
+}
+
+// 候选索引映射（追加）：与 DecodingInfo 把下一页候选追加到显示列表的顺序保持一致
+extern "C" JNIEXPORT void JNICALL
+Java_com_yuyan_inputmethod_core_Rime_appendCandidateIndexMap(JNIEnv* env, jclass,
+                                                             jintArray map) {
+  if (!map) return;
+  jsize len = env->GetArrayLength(map);
+  const jint* elems = env->GetIntArrayElements(map, nullptr);
+  if (elems) {
+    for (jsize i = 0; i < len; ++i) g_candidate_index_map.push_back(elems[i]);
+    env->ReleaseIntArrayElements(map, const_cast<jint*>(elems), JNI_ABORT);
+  }
 }

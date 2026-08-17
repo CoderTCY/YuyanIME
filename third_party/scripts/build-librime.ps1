@@ -11,7 +11,14 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $buildDir = Join-Path $root 'third_party\build-android'
-$targetSo = Join-Path $root 'yuyansdk\libs\arm64-v8a\librime.so'
+# 预编译手写库保留在 yuyansdk/libs；由源码生成的 Rime 库放入 Gradle 生成目录。
+$generatedJniLibDir = Join-Path $root 'yuyansdk\build\generated\rime-jniLibs\arm64-v8a'
+$targetSo = Join-Path $generatedJniLibDir 'librime.so'
+$legacySo = Join-Path $root 'yuyansdk\libs\arm64-v8a\librime.so'
+if (Test-Path $legacySo) {
+    Remove-Item $legacySo -Force
+    Write-Host "[build-librime] 已移除旧生成产物: $legacySo"
+}
 
 # 0. 联想插件 librime-predict（submodule 在 third_party/ 下）：以 junction 挂到
 #    librime/plugins/ 下，供 librime 的插件发现机制（GLOB）编入 rime-static。

@@ -56,6 +56,11 @@ object Kernel {
     val commitText: String
         get() = RimeEngine.preCommitText
 
+    fun recordExternalCommit(text: String) {
+        RimeEngine.recordExternalCommit(text)
+    }
+
+
     // 删除操作
     fun deleteAction() {
         RimeEngine.onDeleteKey()

@@ -119,6 +119,11 @@ class Rime(fullCheck: Boolean) {
             return selectRimeAssociate(index)
         }
 
+        fun recordExternalCommit(text: String) {
+            if (text.isNotEmpty()) recordRimeExternalCommit(text)
+        }
+
+
         @JvmStatic
         external fun startupRime(context: Context, sharedDir: String, userDir: String, fullCheck: Boolean, )
 
@@ -166,5 +171,22 @@ class Rime(fullCheck: Boolean) {
 
         @JvmStatic
         external fun selectRimeAssociate(index: Int): Boolean
+
+        @JvmStatic
+        external fun recordRimeExternalCommit(text: String?)
+
+
+        // 联想词表整体写回（app 拼好的最终显示列表，含标点/日期等自定义项），
+        // 使 selectRimeAssociate 的索引与候选栏显示位置恒等
+        @JvmStatic
+        external fun setAssociateWords(words: Array<String>?)
+
+        // 候选索引映射：显示位置 → rime 原始候选索引（-1 为 app 自定义项如 📋/echo），
+        // 选择时由 JNI 侧翻译，Kotlin 层索引恒等；set 整体替换 / append 翻页追加
+        @JvmStatic
+        external fun setCandidateIndexMap(map: IntArray?)
+
+        @JvmStatic
+        external fun appendCandidateIndexMap(map: IntArray?)
     }
 }

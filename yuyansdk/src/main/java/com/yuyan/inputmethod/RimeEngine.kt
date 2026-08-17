@@ -21,8 +21,6 @@ object RimeEngine {
     var showCandidates: List<CandidateListItem> = emptyList() // 所有待展示的候选词
     var showComposition: String = "" // 候选词上方展示的拼音
     var preCommitText: String = "" // 待提交的文字
-    private var customPhraseSize: Int = 0 // 自定义引擎候选词长度
-    private var rimeCandidateIndexMap: List<Int> = emptyList() // 筛选后候选显示顺序 → rime 原始候选索引
     const val MASK_CASE_LOWER = 0
     private var charCase = 0x0000
     fun init() {
@@ -61,10 +59,8 @@ object RimeEngine {
     }
 
     fun selectCandidate(index: Int): String? {
-        val displayIndex = index - customPhraseSize
-        // 形态筛选改变了候选显示顺序，需映射回 rime 原始候选索引（未筛选/越界时恒等）
-        val indexReal = rimeCandidateIndexMap.getOrElse(displayIndex) { displayIndex }
-        Rime.selectCandidate(indexReal)
+        // 显示位置 → rime 原始候选索引的映射已下沉到 JNI（setCandidateIndexMap），此处索引恒等
+        Rime.selectCandidate(index)
         keyRecordStack.pushCandidateSelectAction()
         return updateCandidatesOrCommitText()
     }
@@ -73,14 +69,16 @@ object RimeEngine {
         return if (Rime.hasRight()) {
             Rime.processKey(getRimeKeycodeByName("Page_Down"), 0)
             val candidates = Rime.getRimeContext()!!.candidates
-            // 英文候选按输入形态筛选（筛选而非转换），并更新筛选后位置 → rime 原始索引的映射；
-            // 仅英文模式筛选（中文候选的汉字是字母，会被形态规则误滤）
+            // 英文候选按输入形态筛选（筛选而非转换），并追加筛选后位置 → rime 原始索引的映射；
+            // 仅英文模式筛选（中文候选的汉字是字母，会被形态规则误滤）；
+            // 中文翻页无筛选，按页内索引恒等映射（与 JNI 当前页一致）
             val (filteredCandidates, indexMap) = if (InputModeSwitcher.isEnglish) {
                 filterEnglishCandidates(candidates.asList(), getEchoComposition())
             } else {
-                candidates.asList() to emptyList()
+                candidates.asList() to (0 until candidates.size).toList()
             }
-            rimeCandidateIndexMap = indexMap
+            // 映射追加到 JNI（与 DecodingInfo 追加候选到显示列表的顺序一致）
+            Rime.appendCandidateIndexMap(indexMap.ifEmpty { (0 until candidates.size).toList() }.toIntArray())
             filteredCandidates.toTypedArray()
         } else emptyArray()
     }
@@ -93,9 +91,8 @@ object RimeEngine {
 
     fun predictAssociationWords(text: String) {
         pinyins = emptyArray()
-        customPhraseSize = 0  // 联想列表无📋前缀，索引与 rime 候选直接对齐，防止残留值错位
         if (text.isNotEmpty()) {
-            showCandidates = buildList {
+            val display = buildList {
                 val words = Rime.getAssociateList(text)
                 val firstFive = words.take(5)
                 addAll(firstFive.filterNotNull().map { CandidateListItem("", it) })
@@ -103,17 +100,25 @@ object RimeEngine {
                 val remaining = words.drop(5)
                 addAll(remaining.filterNotNull().map { CandidateListItem("", it) })
             }
+            // 把最终显示列表整体写回 JNI 词表：选择索引与显示位置恒等，杜绝拼接错位
+            Rime.setAssociateWords(display.map { it.text }.toTypedArray())
+            showCandidates = display
             showComposition = ""
         }
     }
 
     fun selectAssociation(index: Int) {
-        val indexReal = index - customPhraseSize
-        Rime.chooseAssociate(indexReal)
+        // JNI 词表 = 显示列表（predictAssociationWords 已写回），选择索引恒等
+        Rime.chooseAssociate(index)
         // updateCandidatesOrCommitText 已消费 pending 并设置 preCommitText（联想词），
         // 此处不再覆盖（此前误用已清空的 showCandidates 取值导致联想词丢失）
         updateCandidatesOrCommitText()
     }
+
+    fun recordExternalCommit(text: String) {
+        Rime.recordExternalCommit(text)
+    }
+
 
     fun reset() {
         showCandidates = emptyList()
@@ -170,7 +175,6 @@ object RimeEngine {
             return preCommitText
         }
         val candidates = Rime.getRimeContext()?.candidates?.asList() ?: emptyList()
-        customPhraseSize = 0
         val compositionText = Rime.compositionText
         // echo 回显与英文形态筛选的依据：从按键记录重建的真实输入串（含大小写），
         // 不依赖 rime preedit——引擎对 preedit 的大小写处理（折叠/保留）不可控，会导致 echo 大小写飘忽
@@ -188,7 +192,6 @@ object RimeEngine {
                         phrase.add(0, echoComposition)
                     }
                 }
-                customPhraseSize = phrase.size
                 // 英文候选按输入形态筛选（筛选而非转换），并记录筛选后位置 → rime 原始索引的映射；
                 // 仅英文模式筛选——中文候选的汉字是字母，会被形态规则误滤（emoji/Ext-B 反因 surrogate 保留）
                 val (filteredCandidates, indexMap) = if (InputModeSwitcher.isEnglish) {
@@ -196,11 +199,19 @@ object RimeEngine {
                 } else {
                     candidates to emptyList()
                 }
-                rimeCandidateIndexMap = indexMap
+                // 显示位置 → rime 索引映射下沉到 JNI：📋 前缀（含英文 echo）占位 -1，其余映射引擎索引；
+                // 选择时索引恒等，映射与显示列表由同一处构建，杜绝偏移漂移
+                Rime.setCandidateIndexMap(
+                    buildList {
+                        repeat(phrase.size) { add(-1) }
+                        addAll(indexMap.ifEmpty { candidates.indices.toList() })
+                    }.toIntArray()
+                )
                 phrase.map { content -> CandidateListItem("📋", content) }.toMutableList().plus(filteredCandidates)
             }
             else -> {
-                rimeCandidateIndexMap = emptyList()
+                // 无自定义前缀/无筛选：空映射即恒等兜底
+                Rime.setCandidateIndexMap(IntArray(0))
                 candidates
             }
         }

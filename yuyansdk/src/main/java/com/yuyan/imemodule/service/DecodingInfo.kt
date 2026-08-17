@@ -116,6 +116,9 @@ object DecodingInfo {
             candidatesLiveData.value = newCandidates
         } else {  // 手写
             candidate = if (candId in 0..<candidateSize) candidatesLiveData.value!![candId].text  else ""
+            // 手写候选不经过 Rime 的提交路径，需显式纳入联想学习。
+            if (candidate.isNotEmpty()) Kernel.recordExternalCommit(candidate)
+
             reset()
         }
         return candidate

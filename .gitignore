@@ -21,6 +21,3 @@ build/
 # NDK 构建产物与临时文件（boost 聚合头提取到构建目录，同样不进仓库）
 third_party/build-android/
 third_party/opencc-cmd.txt
-
-# librime.so 不进仓库：构建时由 NDK+CMake 生成（third_party/scripts/build-librime.ps1）
-yuyansdk/libs/*/librime.so

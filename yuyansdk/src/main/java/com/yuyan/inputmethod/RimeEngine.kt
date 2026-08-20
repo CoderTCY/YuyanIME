@@ -119,6 +119,10 @@ object RimeEngine {
         Rime.recordExternalCommit(text)
     }
 
+    fun clearAssociationHistory() {
+        Rime.clearAssociationHistory()
+    }
+
 
     fun reset() {
         showCandidates = emptyList()

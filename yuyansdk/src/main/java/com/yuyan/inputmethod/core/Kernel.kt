@@ -60,6 +60,10 @@ object Kernel {
         RimeEngine.recordExternalCommit(text)
     }
 
+    fun clearAssociationHistory() {
+        RimeEngine.clearAssociationHistory()
+    }
+
 
     // 删除操作
     fun deleteAction() {

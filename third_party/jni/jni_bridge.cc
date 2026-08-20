@@ -76,6 +76,7 @@ static void LoadUserBigrams();
 static void SaveUserBigrams();
 static void LearnFromHistory(const rime::CommitHistory& history);
 static void MaybeSaveUserBigrams();
+static void ClearAssociationHistory();
 
 // Java 数据类缓存（startup 时初始化）
 struct JniCache {
@@ -199,11 +200,12 @@ Java_com_yuyan_inputmethod_core_Rime_exitRime(JNIEnv* /*env*/, jclass) {
     g_api->destroy_session(g_session);
     g_session = 0;
   }
+  // Save while Service still owns user_data_dir; finalize releases that state.
+  SaveUserBigrams();
   g_api->finalize();
   g_api = nullptr;
   g_initialized = false;
   g_schema_id.clear();
-  SaveUserBigrams();  // 落盘学习数据（内部有 dirty 检查）
   g_user_bigrams.clear();
   g_user_bigrams_dirty = false;
   g_last_commit_time = 0;
@@ -317,6 +319,18 @@ static void RecordExternalCommit(const std::string& text) {
   }
 }
 
+// Editor-side deletes, sentence terminators, and input-field switches bypass
+// librime's key handling. They must therefore explicitly end its history.
+static void ClearAssociationHistory() {
+  if (g_session != 0) {
+    if (auto session = rime::Service::instance().GetSession(g_session)) {
+      if (auto* ctx = session->context()) ctx->commit_history().clear();
+    }
+  }
+  g_last_commit_time = 0;
+  g_sentence_broken = false;
+}
+
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_yuyan_inputmethod_core_Rime_getRimeCommit(JNIEnv* env, jclass) {
   // 联想词提交：selectRimeAssociate 选中的预测词直接作为 commit 返回（一次性消费）
@@ -357,6 +371,12 @@ Java_com_yuyan_inputmethod_core_Rime_recordRimeExternalCommit(JNIEnv* env, jclas
   if (!raw) return;
   RecordExternalCommit(raw);
   env->ReleaseStringUTFChars(text, raw);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_yuyan_inputmethod_core_Rime_clearRimeAssociationHistory(
+    JNIEnv* /*env*/, jclass) {
+  ClearAssociationHistory();
 }
 
 extern "C" JNIEXPORT jobject JNICALL

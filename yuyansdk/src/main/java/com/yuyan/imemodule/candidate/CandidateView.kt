@@ -234,6 +234,11 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
     fun requestHideSelf() = service.requestHideSelf(0)
 
     private fun sendKeyEvent(keyCode: Int) {
+        if (keyCode == KeyEvent.KEYCODE_DEL ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode in KeyEvent.KEYCODE_DPAD_UP..KeyEvent.KEYCODE_DPAD_RIGHT) {
+            DecodingInfo.clearAssociationHistory()
+        }
         when (keyCode) {
             KeyEvent.KEYCODE_ENTER -> service.sendEnterKeyEvent()
             in KeyEvent.KEYCODE_DPAD_UP..KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -254,7 +259,10 @@ class CandidateView(context: Context, private val service: ImeService) : Lifecyc
 
     fun onStartInput(editorInfo: EditorInfo?, restarting: Boolean) {
         if(editorInfo != null)InputModeSwitcher.requestInputWithSkb(editorInfo)
-        if (!restarting) resetToIdleState()
+        if (!restarting) {
+            DecodingInfo.clearAssociationHistory()
+            resetToIdleState()
+        }
     }
 
 }

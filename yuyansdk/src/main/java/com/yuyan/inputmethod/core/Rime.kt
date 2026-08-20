@@ -123,6 +123,10 @@ class Rime(fullCheck: Boolean) {
             if (text.isNotEmpty()) recordRimeExternalCommit(text)
         }
 
+        fun clearAssociationHistory() {
+            clearRimeAssociationHistory()
+        }
+
 
         @JvmStatic
         external fun startupRime(context: Context, sharedDir: String, userDir: String, fullCheck: Boolean, )
@@ -174,6 +178,9 @@ class Rime(fullCheck: Boolean) {
 
         @JvmStatic
         external fun recordRimeExternalCommit(text: String?)
+
+        @JvmStatic
+        external fun clearRimeAssociationHistory()
 
 
         // 联想词表整体写回（app 拼好的最终显示列表，含标点/日期等自定义项），

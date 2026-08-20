@@ -296,11 +296,15 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             PopupMenuMode.Clear -> {
                 if (isAddPhrases) mAddPhrasesLayout.clearPhrasesContent()
                 else service.getTextBeforeCursor(1000).takeIf { it.isNotEmpty() }?.let {
+                    DecodingInfo.clearAssociationHistory()
                     textBeforeCursors.push(it)
                     service.deleteSurroundingText(1000)
                 }
             }
-            PopupMenuMode.Revertl -> textBeforeCursors.popInReverseOrder()?.takeIf { it.isNotEmpty() }?.let { commitText(it) }
+            PopupMenuMode.Revertl -> textBeforeCursors.popInReverseOrder()?.takeIf { it.isNotEmpty() }?.let {
+                DecodingInfo.clearAssociationHistory()
+                commitText(it)
+            }
             PopupMenuMode.Enter -> commitText("\n")
             else -> {}
         }
@@ -455,9 +459,16 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
             InputModeSwitcher.USER_KEYCODE_EMOJI -> onSettingsMenuClick(SkbMenuMode.Emojicon)
             in InputModeSwitcher.USER_KEYCODE_RETURN..InputModeSwitcher.USER_KEYCODE_LANG -> InputModeSwitcher.switchModeForUserKey(keyCode)
-            in InputModeSwitcher.USER_KEYCODE_PASTE..InputModeSwitcher.USER_KEYCODE_CUT -> commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
-            InputModeSwitcher.USER_KEYCODE_MOVE_START -> service.setSelection(0, if (hasSelection) selEnd else 0)
+            in InputModeSwitcher.USER_KEYCODE_PASTE..InputModeSwitcher.USER_KEYCODE_CUT -> {
+                if (keyCode != InputModeSwitcher.USER_KEYCODE_COPY) DecodingInfo.clearAssociationHistory()
+                commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
+            }
+            InputModeSwitcher.USER_KEYCODE_MOVE_START -> {
+                DecodingInfo.clearAssociationHistory()
+                service.setSelection(0, if (hasSelection) selEnd else 0)
+            }
             InputModeSwitcher.USER_KEYCODE_MOVE_END -> {
+                DecodingInfo.clearAssociationHistory()
                 if (hasSelection) {
                     val start = selStart
                     commitTextEditMenu(KeyPreset.textEditMenuPreset[InputModeSwitcher.USER_KEYCODE_SELECT_ALL])
@@ -469,12 +480,19 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
             InputModeSwitcher.USER_KEYCODE_SELECT_MODE -> {
                 hasSelection = !hasSelection
-                if (!hasSelection) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+                if (!hasSelection) {
+                    DecodingInfo.clearAssociationHistory()
+                    service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+                }
             }
             InputModeSwitcher.USER_KEYCODE_SELECT_ALL -> {
                 hasSelectionAll = !hasSelectionAll
-                if (!hasSelectionAll) service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
-                else commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
+                if (!hasSelectionAll) {
+                    DecodingInfo.clearAssociationHistory()
+                    service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+                } else {
+                    commitTextEditMenu(KeyPreset.textEditMenuPreset[keyCode])
+                }
             }
             else -> {
                 if(label.isNotEmpty()){
@@ -624,7 +642,22 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     fun requestHideSelf() = service.requestHideSelf(0)
 
+    private fun clearAssociationHistoryForEditorKey(keyCode: Int) {
+        if (keyCode == KeyEvent.KEYCODE_DEL ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode in KeyEvent.KEYCODE_DPAD_UP..KeyEvent.KEYCODE_DPAD_RIGHT) {
+            DecodingInfo.clearAssociationHistory()
+        }
+    }
+
+    private fun clearAssociationHistoryAtSentenceBoundary(text: String) {
+        when (text.lastOrNull()) {
+            '\n', '。', '！', '？', '；', '…' -> DecodingInfo.clearAssociationHistory()
+        }
+    }
+
     private fun sendKeyEvent(keyCode: Int) {
+        if (!isAddPhrases) clearAssociationHistoryForEditorKey(keyCode)
         if (isAddPhrases) {
             mAddPhrasesLayout.sendKeyEvent(keyCode)
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -649,14 +682,19 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     }
 
     private fun commitText(text: String) {
-        if (isAddPhrases) mAddPhrasesLayout.commitText(text)
-        else service.commitText(StringUtils.converted2FlowerTypeface(text))
+        if (isAddPhrases) {
+            mAddPhrasesLayout.commitText(text)
+        } else {
+            clearAssociationHistoryAtSentenceBoundary(text)
+            service.commitText(StringUtils.converted2FlowerTypeface(text))
+        }
     }
 
     private fun commitPairSymbol(text: String) {
         if (isAddPhrases) {
             mAddPhrasesLayout.commitText(text)
         } else {
+            clearAssociationHistoryAtSentenceBoundary(text)
             if (appPrefs.input.symbolPairInput.getValue()) {
                 service.commitText(text + SymbolPreset[text]!!)
                 postDelayed(300) { service.sendCombinationKeyEvents(KeyEvent.KEYCODE_DPAD_LEFT) }
@@ -716,6 +754,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         InputModeSwitcher.requestInputWithSkb(editorInfo)
         if (!restarting) {
+            DecodingInfo.clearAssociationHistory()
             resetToIdleState()
             val clipboard = appPrefs.clipboard
             if (clipboard.clipboardSuggestion.getValue()) {

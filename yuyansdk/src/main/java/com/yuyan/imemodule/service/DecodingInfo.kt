@@ -29,6 +29,10 @@ object DecodingInfo {
         Kernel.reset()
     }
 
+    fun clearAssociationHistory() {
+        Kernel.clearAssociationHistory()
+    }
+
     val isCandidatesEmpty: Boolean
         // 候选词列表是否为空
         get() = candidatesLiveData.value.isNullOrEmpty()

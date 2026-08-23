@@ -16,6 +16,7 @@ import com.yuyan.imemodule.application.CustomConstant
 import com.yuyan.imemodule.data.theme.ThemeManager.activeTheme
 import com.yuyan.imemodule.database.DataBaseKT
 import com.yuyan.imemodule.database.entry.Clipboard
+import com.yuyan.imemodule.database.entry.ClipboardPreview
 import com.yuyan.imemodule.libs.recyclerview.SwipeMenu
 import com.yuyan.imemodule.libs.recyclerview.SwipeMenuBridge
 import com.yuyan.imemodule.libs.recyclerview.SwipeMenuItem
@@ -70,11 +71,11 @@ class ClipBoardContainer(context: Context, inputView: InputView) : BaseContainer
         CustomConstant.lockClipBoardEnable = false
         itemMode = item
         mRVSymbolsView.setHasFixedSize(true)
-        val copyContents : MutableList<Clipboard> =
+        val copyContents : MutableList<ClipboardPreview> =
             if(itemMode == SkbMenuMode.ClipBoard) {
-                DataBaseKT.instance.clipboardDao().getAll().toMutableList()
+                DataBaseKT.instance.clipboardDao().getAllPreview().toMutableList()
             } else {
-                DataBaseKT.instance.phraseDao().getAll().map { line -> Clipboard(line.content) }.toMutableList()
+                DataBaseKT.instance.phraseDao().getAll().map { line -> ClipboardPreview(line.content, 0, line.time) }.toMutableList()
             }
         val manager =  when (AppPrefs.getInstance().clipboard.clipboardLayoutCompact.getValue()){
             ClipboardLayoutMode.ListView ->  LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
@@ -99,7 +100,10 @@ class ClipBoardContainer(context: Context, inputView: InputView) : BaseContainer
         val adapter = ClipBoardAdapter(context, copyContents)
         mRVSymbolsView.setAdapter(null)
         mRVSymbolsView.setOnItemClickListener{ _: View?, position: Int ->
-            inputView.responseLongKeyEvent(Pair(PopupMenuMode.Text, copyContents[position].content))
+            val preview = copyContents[position]
+            // 预览仅前 200 字符，提交前按 time 取回完整内容
+            val content = DataBaseKT.instance.clipboardDao().getFullContent(preview.time) ?: preview.content
+            inputView.responseLongKeyEvent(Pair(PopupMenuMode.Text, content))
             if(!CustomConstant.lockClipBoardEnable)KeyboardManager.instance.switchKeyboard()
         }
         mRVSymbolsView.setSwipeMenuCreator{ _: SwipeMenu, rightMenu: SwipeMenu, position: Int ->
@@ -120,13 +124,14 @@ class ClipBoardContainer(context: Context, inputView: InputView) : BaseContainer
             menuBridge.closeMenu()
             if(itemMode == SkbMenuMode.ClipBoard){
                 if(menuBridge.position == 0) {
-                    val data: Clipboard = copyContents[position]
-                    data.isKeep = 1 - data.isKeep
-                    DataBaseKT.instance.clipboardDao().update(data)
+                    val data: ClipboardPreview = copyContents[position]
+                    val updated = data.copy(isKeep = 1 - data.isKeep)
+                    DataBaseKT.instance.clipboardDao().update(
+                        Clipboard(updated.content, updated.isKeep, updated.time))
                     showClipBoardView(SkbMenuMode.ClipBoard)
                 } else if(menuBridge.position == 1){
-                    val data: Clipboard = copyContents.removeAt(position)
-                    DataBaseKT.instance.clipboardDao().deleteByContent(data.content)
+                    val data: ClipboardPreview = copyContents.removeAt(position)
+                    DataBaseKT.instance.clipboardDao().deleteByTime(data.time)
                     mRVSymbolsView.adapter?.notifyItemRemoved(position)
                 }
             } else {
@@ -143,7 +148,7 @@ class ClipBoardContainer(context: Context, inputView: InputView) : BaseContainer
     }
 
     private val mHashMapSymbols = HashMap<Int, Int>() //候选词索引列数对应表
-    private fun calculateColumn(data : MutableList<Clipboard>) {
+    private fun calculateColumn(data : MutableList<ClipboardPreview>) {
         mHashMapSymbols.clear()
         val itemWidth = instance.skbWidth/6 - dp(10)
         var mCurrentColumn = 0

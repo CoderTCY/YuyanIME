@@ -761,11 +761,11 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 val internal = appPrefs.internal
                 val lastTime = internal.clipboardUpdateTime.getValue()
                 if (System.currentTimeMillis() - lastTime <= clipboardItemTimeout * 1000) {
-                    val content = internal.clipboardUpdateContent.getValue()
-                    if (content.isNotBlank()) {
+                    val content = DataBaseKT.instance.clipboardDao().getLatestContent()
+                    if (!content.isNullOrBlank()) {
                         showSymbols(arrayOf(content))
-                        internal.clipboardUpdateTime.setValue(0L)
                     }
+                    internal.clipboardUpdateTime.setValue(0L)
                 }
             }
         }

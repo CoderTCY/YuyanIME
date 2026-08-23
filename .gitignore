@@ -21,3 +21,4 @@ build/
 # NDK 构建产物与临时文件（boost 聚合头提取到构建目录，同样不进仓库）
 third_party/build-android/
 third_party/opencc-cmd.txt
+tools/

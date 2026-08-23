@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.data.theme.ThemeManager
 import com.yuyan.imemodule.data.theme.ThemeManager.activeTheme
-import com.yuyan.imemodule.database.entry.Clipboard
+import com.yuyan.imemodule.database.entry.ClipboardPreview
 import com.yuyan.imemodule.prefs.AppPrefs
 import com.yuyan.imemodule.prefs.behavior.ClipboardLayoutMode
 import com.yuyan.imemodule.singleton.EnvironmentSingleton.Companion.instance
@@ -27,9 +27,9 @@ import splitties.views.dsl.core.margin
 /**
  * 剪切板界面适配器
  */
-class ClipBoardAdapter(context: Context, datas: MutableList<Clipboard>) :
+class ClipBoardAdapter(context: Context, datas: MutableList<ClipboardPreview>) :
     RecyclerView.Adapter<ClipBoardAdapter.SymbolHolder>() {
-    private var mDatas : MutableList<Clipboard> = datas
+    private var mDatas : MutableList<ClipboardPreview> = datas
     private val mContext: Context
     private var textColor: Int
     private var clipboardLayoutCompact: ClipboardLayoutMode

@@ -12,6 +12,7 @@ import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import com.yuyan.imemodule.candidate.CandidateView
+import com.yuyan.imemodule.database.DataBaseKT
 import com.yuyan.imemodule.data.emojicon.YuyanEmojiCompat
 import com.yuyan.imemodule.data.theme.Theme
 import com.yuyan.imemodule.data.theme.ThemeManager.OnThemeChangeListener
@@ -46,10 +47,12 @@ class ImeService : InputMethodService() {
         if (isHardwareKeyboard) { if (::mCandidateView.isInitialized) mCandidateView.updateTheme() }
         else { if (::mInputView.isInitialized) mInputView.updateTheme() }
     }
-    private val clipboardUpdateContent = getInstance().internal.clipboardUpdateContent
-    private val clipboardUpdateContentListener = ManagedPreference.OnChangeListener<String> { _, value ->
+    private val clipboardUpdateTime = getInstance().internal.clipboardUpdateTime
+    private val clipboardUpdateListener = ManagedPreference.OnChangeListener<Long> { _, _ ->
         if(isSoftKeyboard && getInstance().clipboard.clipboardSuggestion.getValue()){
-            if(value.isNotBlank()) {
+            // 内容不再经 SharedPreferences 传递，从剪贴板库取最新一条全文
+            val value = DataBaseKT.instance.clipboardDao().getLatestContent()
+            if(!value.isNullOrBlank()) {
                 if(KeyboardManager.instance.currentContainer is ClipBoardContainer
                     && (KeyboardManager.instance.currentContainer as ClipBoardContainer).getMenuMode() == SkbMenuMode.ClipBoard ){
                     (KeyboardManager.instance.currentContainer as ClipBoardContainer).showClipBoardView(SkbMenuMode.ClipBoard)
@@ -62,7 +65,7 @@ class ImeService : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         addOnChangedListener(onThemeChangeListener)
-        clipboardUpdateContent.registerOnChangeListener(clipboardUpdateContentListener)
+        clipboardUpdateTime.registerOnChangeListener(clipboardUpdateListener)
     }
 
     override fun onCreateInputView(): View {
@@ -102,7 +105,7 @@ class ImeService : InputMethodService() {
     override fun onDestroy() {
         super.onDestroy()
         removeOnChangedListener(onThemeChangeListener)
-        clipboardUpdateContent.unregisterOnChangeListener(clipboardUpdateContentListener)
+        clipboardUpdateTime.unregisterOnChangeListener(clipboardUpdateListener)
     }
 
     /**

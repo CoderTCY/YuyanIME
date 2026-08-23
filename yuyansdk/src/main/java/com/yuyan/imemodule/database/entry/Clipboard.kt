@@ -2,9 +2,10 @@ package com.yuyan.imemodule.database.entry
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "clipboard")
+@Entity(tableName = "clipboard", indices = [Index(value = ["time"])])
 data class Clipboard(
     @PrimaryKey
     @ColumnInfo(name = "content")

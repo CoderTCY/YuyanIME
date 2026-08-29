@@ -546,13 +546,9 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeKeycodeByName(JNIEnv* env, jclass,
 // 用户联想学习（借鉴 fcitx5/libime 的 UserLanguageModel 思路，轻量 bigram 版）
 // ---------------------------------------------------------------------------
 
-// 学习数据路径：用户数据目录（与 predict.db 同目录）；统一模型单文件，
-// user_predict_char.txt 为旧版字通道遗留，加载迁移后删除
+// 学习数据路径：用户数据目录（与 predict.db 同目录），统一模型单文件
 static std::string UserPredictPath() {
   return (rime::Service::instance().deployer().user_data_dir / "user_predict.txt").string();
-}
-static std::string UserPredictCharPath() {
-  return (rime::Service::instance().deployer().user_data_dir / "user_predict_char.txt").string();
 }
 
 // UTF-8 码点长度（按首字节）
@@ -635,8 +631,7 @@ static void LearnContinuation(const std::string& ctx, const std::string& value,
 
 // 文件格式 #v3：首行 "#v3"，之后每行 key \t value \t 权重 \t 最后命中毫秒；
 // 同一 (key,value) 可出现多次（delta 追加），重放时后写覆盖。
-// 旧格式迁移：词通道文件（v2 带权重/时间、v1 仅次数）的词级键降级为其
-// 1~3 字后缀；字通道文件键本是单字直接并入，读取后即删除。
+// 旧格式迁移：v1（仅次数）/v2（权重+时间）的词级键降级为其 1~3 字后缀。
 static bool FirstLineIsV3(const std::string& path) {
   std::ifstream in(path);
   std::string line;
@@ -690,10 +685,6 @@ static void LoadUserBigrams() {
   if (FirstLineIsV3(main_path)) {
     LoadFile(main_path, false);
   } else if (LoadFile(main_path, true)) {  // 旧版词级键：后缀降级迁移
-    migrated = true;
-  }
-  if (LoadFile(UserPredictCharPath(), false)) {  // 旧版字通道：单字键直接并入
-    std::remove(UserPredictCharPath().c_str());
     migrated = true;
   }
   if (migrated) {

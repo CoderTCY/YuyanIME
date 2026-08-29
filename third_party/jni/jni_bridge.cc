@@ -12,8 +12,9 @@
 //     英文方案保留大小写（english schema 的 speller 按大小写匹配）
 //  4. 联想词（getRimeAssociateList/selectRimeAssociate）：官方 librime 无此 API，
 //     由 librime-predict 插件（PredictEngine）查询 predict.db 提供；动态学习：
-//     基于 commit_history（分词后的提交词序列）增量统计 bigram（上屏词→下屏词），
-//     落盘 user_predict.txt，查询时动态数据优先；app 层 CustomEngine 兜底。
+//     统一续接模型——commit_history 拍平为字符流，键=上文末 1~3 字、值=续接串
+//     （字或词），EMA 衰减，落盘 user_predict.txt（#v3 增量+压实），查询时
+//     动态数据优先；app 层 CustomEngine 兜底。
 //  5. setRimePageSize：no-op——候选页大小由重建后的 schema yaml 的 menu/page_size 配置
 //  6. getRimeKeycodeByName：自建 X11 keysym 映射表（app 仅用 Page_Down/BackSpace）
 
@@ -41,6 +42,7 @@
 #include <cstring>
 #include <fstream>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -61,20 +63,22 @@ static std::vector<std::string> g_associate_words;  // 最近一次联想候选�
 static int g_pending_associate = -1;  // 待提交的联想词索引（getRimeCommit 消费）
 static std::vector<int> g_candidate_index_map;  // 显示位置 → rime 候选索引（setCandidateIndexMap 写入，-1 为 app 自定义项）
 
-// 用户联想学习（借鉴 fcitx5/libime 的 UserLanguageModel 思路，轻量 bigram 版）：
-// 提交词序列（commit_history）→ 相邻词对 bigram（上屏词→下屏词）增量学习；
-// 句子边界：librime 在 Return/BackSpace 时自动清空 history（天然断句），
-// 另补超时（跨输入框/长停顿）与句末标点两种边界，防跨句串学；
-// 权重为在线指数衰减（EMA，τ=30 天）：旧习惯随时间淡出，查询按衰减分排序；
-// 词级/字级双通道独立容量（防字对挤占词对配额），落盘时淘汰低分噪声项
+// 用户联想学习（统一续接模型，近似 librime octagram 的字级 n-gram 思路）：
+// 提交文本拍平为带句边界的字符流；键 = 上文末 1~3 个字符，值 = 续接串
+// （字或词——粒度由提交行为自然决定，字/词不分通道、无配额竞争）；
+// 权重为在线指数衰减（EMA，τ=30 天），查询按 3→2→1 最长匹配回退；
+// 落盘 #v3：平时增量追加 delta，超 2MB 或旧格式迁移后压实为全量快照
+// （原子 rename），压实时淘汰衰减分 <0.05 的噪声项并按分截断到容量上限
 struct LearnEntry {
   double w = 0;      // EMA 权重
-  int64_t t_ms = 0;  // 最后命中时间（毫秒）
+  int64_t t_ms = 0;  // 最后命中时间（毫秒，墙钟——需跨进程可比）
 };
-using BigramChannel = std::map<std::string, std::map<std::string, LearnEntry>>;
-static BigramChannel g_word_bigrams;  // 记录间词对（上屏词→下屏词）
-static BigramChannel g_char_bigrams;  // 词内字对（相邻汉字）
+using ContinuationMap = std::map<std::string, std::map<std::string, LearnEntry>>;
+static ContinuationMap g_continuations;  // 字上下文 → 续接串
 static bool g_user_bigrams_dirty = false;
+static std::set<std::pair<std::string, std::string>> g_delta;  // 距上次落盘有更新的条目
+static size_t g_delta_bytes = 0;    // delta 估算字节数（压实阈值用）
+static bool g_force_compact = false;  // 旧格式迁移后强制全量快照
 static int64_t g_last_user_bigrams_save = 0;  // 上次落盘时间（毫秒，节流用）
 static int64_t g_last_commit_time = 0;  // 上次提交时间（毫秒，超时断句用）
 static bool g_sentence_broken = false;  // 句末标点后置位：下一提交的跨边界对不学
@@ -82,10 +86,10 @@ static bool g_sentence_broken = false;  // 句末标点后置位：下一提交�
 static std::string g_last_learned_type, g_last_learned_text;
 static bool g_has_last_learned = false;
 static const int64_t kSentenceTimeoutMs = 60000;  // 提交间隔超 60s 视为新句
-static const size_t kMaxWordBigramEntries = 15000;  // 词级通道容量上限
-static const size_t kMaxCharBigramEntries = 5000;   // 字级通道容量上限
+static const size_t kMaxContinuationEntries = 100000;  // 容量上限（压实时按分截断）
+static const size_t kMaxDeltaBytes = 2 * 1024 * 1024;  // delta 超 2MB 触发压实
 static const double kDecayTauMs = 30.0 * 24 * 3600 * 1000;  // EMA 衰减常数（30 天）
-static const double kMinKeepScore = 0.05;  // 衰减分低于此值视为噪声，落盘淘汰
+static const double kMinKeepScore = 0.05;  // 衰减分低于此值视为噪声，压实淘汰
 
 // 前向声明：定义见下方“用户联想学习”区（startupRime/exitRime 先于定义使用）
 static void LoadUserBigrams();
@@ -222,8 +226,10 @@ Java_com_yuyan_inputmethod_core_Rime_exitRime(JNIEnv* /*env*/, jclass) {
   g_api = nullptr;
   g_initialized = false;
   g_schema_id.clear();
-  g_word_bigrams.clear();
-  g_char_bigrams.clear();
+  g_continuations.clear();
+  g_delta.clear();
+  g_delta_bytes = 0;
+  g_force_compact = false;
   g_user_bigrams_dirty = false;
   g_last_commit_time = 0;
   g_sentence_broken = false;
@@ -540,7 +546,8 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeKeycodeByName(JNIEnv* env, jclass,
 // 用户联想学习（借鉴 fcitx5/libime 的 UserLanguageModel 思路，轻量 bigram 版）
 // ---------------------------------------------------------------------------
 
-// 学习数据路径：用户数据目录（与 predict.db 同目录）；词级/字级双通道分文件
+// 学习数据路径：用户数据目录（与 predict.db 同目录）；统一模型单文件，
+// user_predict_char.txt 为旧版字通道遗留，加载迁移后删除
 static std::string UserPredictPath() {
   return (rime::Service::instance().deployer().user_data_dir / "user_predict.txt").string();
 }
@@ -548,11 +555,30 @@ static std::string UserPredictCharPath() {
   return (rime::Service::instance().deployer().user_data_dir / "user_predict_char.txt").string();
 }
 
-// 汉字开头（UTF-8 首字节 E4~E9 覆盖常用汉字区）——只学中文词对，过滤英文/标点
-static bool StartsWithHan(const std::string& s) {
-  if (s.empty()) return false;
-  unsigned char c = (unsigned char)s[0];
-  return c >= 0xE4 && c <= 0xE9;
+// UTF-8 码点长度（按首字节）
+static size_t Utf8CharLen(unsigned char c) {
+  if (c >= 0xF0) return 4;
+  if (c >= 0xE0) return 3;
+  if (c >= 0xC0) return 2;
+  return 1;
+}
+
+// 末尾最多 n 个码点
+static std::string LastChars(const std::string& s, size_t n) {
+  size_t count = 0, i = s.size();
+  while (i > 0 && count < n) {
+    --i;
+    while (i > 0 && ((unsigned char)s[i] & 0xC0) == 0x80) --i;  // 跳过 continuation
+    ++count;
+  }
+  return s.substr(i);
+}
+
+// 去掉首个码点
+static std::string StripFirstChar(const std::string& s) {
+  if (s.empty()) return s;
+  size_t first = Utf8CharLen((unsigned char)s[0]);
+  return first >= s.size() ? std::string() : s.substr(first);
 }
 
 // 墙钟毫秒：t_ms 要落盘跨进程比较，steady_clock 重启后不可比
@@ -587,26 +613,43 @@ static double EntryScore(const LearnEntry& e, int64_t now) {
   return Decayed(e.w, now - e.t_ms);
 }
 
-static void LearnPair(BigramChannel& ch, const std::string& key,
-                      const std::string& value, int64_t now) {
-  LearnEntry& e = ch[key][value];
+static void LearnPair(const std::string& key, const std::string& value, int64_t now) {
+  LearnEntry& e = g_continuations[key][value];
   e.w = Decayed(e.w, now - e.t_ms) + 1.0;  // 新条目 w=0 衰减后仍为 0
   e.t_ms = now;
   g_user_bigrams_dirty = true;
+  if (g_delta.emplace(key, value).second) {
+    g_delta_bytes += key.size() + value.size() + 24;  // 落盘行格式估算
+  }
 }
 
-// 文件格式：首行 #v2 后每行 key \t value \t 权重 \t 最后命中毫秒；
-// 无 #v2 头按旧版（key \t value \t 次数）迁移：次数直接作权重，命中时间记为现在
-static void LoadChannel(const std::string& path, BigramChannel& ch) {
-  ch.clear();
+// 以 ctx（≤3 字）的全部 1~3 字后缀为键学习续接串 value
+static void LearnContinuation(const std::string& ctx, const std::string& value,
+                              int64_t now) {
+  std::string key = ctx;
+  while (!key.empty()) {
+    LearnPair(key, value, now);
+    key = StripFirstChar(key);
+  }
+}
+
+// 文件格式 #v3：首行 "#v3"，之后每行 key \t value \t 权重 \t 最后命中毫秒；
+// 同一 (key,value) 可出现多次（delta 追加），重放时后写覆盖。
+// 旧格式迁移：词通道文件（v2 带权重/时间、v1 仅次数）的词级键降级为其
+// 1~3 字后缀；字通道文件键本是单字直接并入，读取后即删除。
+static bool FirstLineIsV3(const std::string& path) {
   std::ifstream in(path);
-  if (!in) return;
+  std::string line;
+  return in && std::getline(in, line) && line == "#v3";
+}
+
+static bool LoadFile(const std::string& path, bool legacy_word_keys) {
+  std::ifstream in(path);
+  if (!in) return false;
   const int64_t now = NowMs();
-  bool v2 = false;
   std::string line;
   while (std::getline(in, line)) {
-    if (line.empty()) continue;
-    if (line == "#v2") { v2 = true; continue; }  // key 均为汉字开头，不会撞头
+    if (line.empty() || line[0] == '#') continue;  // 跳过 #v2/#v3 头
     size_t t1 = line.find('\t');
     if (t1 == std::string::npos) continue;
     size_t t2 = line.find('\t', t1 + 1);
@@ -615,31 +658,55 @@ static void LoadChannel(const std::string& path, BigramChannel& ch) {
     std::string value = line.substr(t1 + 1, t2 - t1 - 1);
     if (key.empty() || value.empty()) continue;
     LearnEntry e;
-    if (v2) {
-      size_t t3 = line.find('\t', t2 + 1);
-      if (t3 == std::string::npos) continue;
+    size_t t3 = line.find('\t', t2 + 1);
+    if (t3 != std::string::npos) {  // v2/v3：权重 + 命中毫秒
       e.w = strtod(line.c_str() + t2 + 1, nullptr);
       e.t_ms = (int64_t)strtoll(line.c_str() + t3 + 1, nullptr, 10);
       if (e.w <= 0 || e.t_ms <= 0) continue;
-    } else {
+    } else {  // v1：次数
       int count = atoi(line.c_str() + t2 + 1);
       if (count <= 0) continue;
       e.w = (double)count;
       e.t_ms = now;
     }
-    ch[key][value] = e;
+    if (legacy_word_keys) {
+      // 词级键 → 1~3 字后缀降级（各后缀共享同一权重，近似迁移）
+      std::string suffix = LastChars(key, 3);
+      while (!suffix.empty()) {
+        g_continuations[suffix][value] = e;
+        suffix = StripFirstChar(suffix);
+      }
+    } else {
+      g_continuations[key][value] = e;
+    }
   }
+  return true;
 }
 
 static void LoadUserBigrams() {
-  LoadChannel(UserPredictPath(), g_word_bigrams);
-  LoadChannel(UserPredictCharPath(), g_char_bigrams);
+  g_continuations.clear();
+  bool migrated = false;
+  const std::string main_path = UserPredictPath();
+  if (FirstLineIsV3(main_path)) {
+    LoadFile(main_path, false);
+  } else if (LoadFile(main_path, true)) {  // 旧版词级键：后缀降级迁移
+    migrated = true;
+  }
+  if (LoadFile(UserPredictCharPath(), false)) {  // 旧版字通道：单字键直接并入
+    std::remove(UserPredictCharPath().c_str());
+    migrated = true;
+  }
+  if (migrated) {
+    // 立刻压实为 #v3 快照，旧格式只迁移一次
+    g_force_compact = true;
+    g_user_bigrams_dirty = true;
+    SaveUserBigrams();
+  }
 }
 
-// 单通道落盘：按当前衰减分淘汰噪声项（score < kMinKeepScore）并同步收缩内存，
-// 超容量按分截断；写 .tmp 后 rename，防进程被杀留下半写文件
-static void SaveChannel(const std::string& path, BigramChannel& ch, size_t cap,
-                        int64_t now) {
+// 全量压实：淘汰低分噪声项（score < kMinKeepScore），超容量按分截断；
+// 写 .tmp 后 rename，防进程被杀留下半写文件；内存同步收缩
+static void CompactSave(const std::string& path, int64_t now) {
   struct Row {
     double score;
     const std::string* key;
@@ -647,7 +714,7 @@ static void SaveChannel(const std::string& path, BigramChannel& ch, size_t cap,
     LearnEntry e;
   };
   std::vector<Row> rows;
-  for (const auto& kv : ch) {
+  for (const auto& kv : g_continuations) {
     for (const auto& vc : kv.second) {
       double s = EntryScore(vc.second, now);
       if (s >= kMinKeepScore) {
@@ -655,16 +722,17 @@ static void SaveChannel(const std::string& path, BigramChannel& ch, size_t cap,
       }
     }
   }
-  if (rows.size() > cap) {
-    std::partial_sort(rows.begin(), rows.begin() + cap, rows.end(),
+  if (rows.size() > kMaxContinuationEntries) {
+    std::partial_sort(rows.begin(), rows.begin() + kMaxContinuationEntries,
+                      rows.end(),
                       [](const Row& a, const Row& b) { return a.score > b.score; });
-    rows.resize(cap);
+    rows.resize(kMaxContinuationEntries);
   }
   const std::string tmp = path + ".tmp";
   {
     std::ofstream out(tmp, std::ios::trunc);
     if (!out) return;
-    out << "#v2\n";
+    out << "#v3\n";
     char num[64];
     for (const Row& r : rows) {
       std::snprintf(num, sizeof(num), "%.9g\t%lld", r.e.w, (long long)r.e.t_ms);
@@ -675,16 +743,40 @@ static void SaveChannel(const std::string& path, BigramChannel& ch, size_t cap,
   std::remove(path.c_str());  // Windows 的 rename 不覆盖已存在目标
   std::rename(tmp.c_str(), path.c_str());
   // 内存与落盘一致：被淘汰/截断的条目一并移除
-  BigramChannel kept;
+  ContinuationMap kept;
   for (const Row& r : rows) kept[*r.key][*r.value] = r.e;
-  ch.swap(kept);
+  g_continuations.swap(kept);
+}
+
+static bool FileExists(const std::string& path) {
+  std::ifstream in(path);
+  return in.good();
 }
 
 static void SaveUserBigrams() {
   if (!g_user_bigrams_dirty) return;
   const int64_t now = NowMs();
-  SaveChannel(UserPredictPath(), g_word_bigrams, kMaxWordBigramEntries, now);
-  SaveChannel(UserPredictCharPath(), g_char_bigrams, kMaxCharBigramEntries, now);
+  const std::string path = UserPredictPath();
+  if (g_force_compact || g_delta_bytes > kMaxDeltaBytes || !FileExists(path)) {
+    CompactSave(path, now);
+    g_force_compact = false;
+  } else {
+    // 增量：只追加距上次落盘有更新的条目（重放时后写覆盖）
+    std::ofstream out(path, std::ios::app);
+    if (!out) return;
+    char num[64];
+    for (const auto& kv : g_delta) {
+      auto kit = g_continuations.find(kv.first);
+      if (kit == g_continuations.end()) continue;
+      auto vit = kit->second.find(kv.second);
+      if (vit == kit->second.end()) continue;
+      std::snprintf(num, sizeof(num), "%.9g\t%lld", vit->second.w,
+                    (long long)vit->second.t_ms);
+      out << kv.first << '\t' << kv.second << '\t' << num << '\n';
+    }
+  }
+  g_delta.clear();
+  g_delta_bytes = 0;
   g_user_bigrams_dirty = false;
 }
 
@@ -696,34 +788,17 @@ static void MaybeSaveUserBigrams() {
   SaveUserBigrams();
 }
 
-// 词内字对学习：整词一次上屏（如拼音打"你好"整条 commit）在 commit_history 中
-// 是单条记录，记录间 bigram 学不到词内组合；按 UTF-8 码点拆出相邻汉字对
-// （"你"→"好"）补充入账，与记录间学习互补，且不跨记录、不受断句边界影响。
-static void LearnWordPairs(const std::string& text, int64_t now) {
-  std::string prev;
-  for (size_t i = 0; i < text.size();) {
-    size_t len = 1;
-    unsigned char c = (unsigned char)text[i];
-    if (c >= 0xF0) len = 4;
-    else if (c >= 0xE0) len = 3;
-    else if (c >= 0xC0) len = 2;
-    const std::string cur = text.substr(i, len);
-    if (StartsWithHan(prev) && StartsWithHan(cur)) {
-      LearnPair(g_char_bigrams, prev, cur, now);
-    }
-    prev = cur;
-    i += len;
-  }
-}
-
-// 从 commit_history（librime 分词后的提交词序列）学习。一次 commit 可能 Push
-// 多条记录（每 segment 一条，相邻同类型合并），须学完新增区间内的所有相邻对，
-// 而非仅最后一对（旧实现丢句内 bigram）。新增区间定位：记住上次学到的尾记录
-// （按值匹配；连续重复文本的极端情况下可能漏学一对，频率模型可容忍）；
+// 从 commit_history（librime 分词后的提交词序列）学习统一续接模型。
+// 一次 commit 可能 Push 多条记录（每 segment 一条，相邻同类型合并），须学完
+// 新增区间内的所有记录，而非仅最后一条。新增区间定位：记住上次学到的尾记录
+// （按值匹配；连续重复文本的极端情况下可能漏学一条，频率模型可容忍）；
 // 匹配不到（记录超 kMaxRecords=20 被淘汰或 history 被清空重建）则全量补学。
+// 每条记录学两类续接（同一键空间）：
+//   词值 —— 句内上文末 1~3 字 → 整个提交单位（词/短语，粒度由提交行为决定）
+//   字值 —— 记录内每个字符以其前 ≤3 字为键入账（词内组合由此自然涌现）
 // 边界处理：① Return/BackSpace 由 librime 清空 history（天然断句）
-// ② 提交间隔超时视为新句 ③ 句末标点后置 g_sentence_broken —— ②③ 只阻断
-// 新增区间的第一对（跨 commit 边界），同一 commit 内部的相邻对不受限。
+// ② 提交间隔超时视为新句 ③ 句末标点重置上下文 —— ②③ 只阻断新增区间
+// 第一条记录的上下文（跨 commit 边界），同一 commit 内部不受限。
 static void LearnFromHistory(const rime::CommitHistory& history) {
   const int64_t now = NowMs();
   const bool timeout =
@@ -746,20 +821,32 @@ static void LearnFromHistory(const rime::CommitHistory& history) {
         break;
       }
     }
-    if (!found) start = 0;  // 尾记录已不在：补学现存全部相邻对
+    if (!found) start = 0;  // 尾记录已不在：补学现存全部记录
+  }
+  // 句内上下文（末 ≤3 字）：跨 commit 边界超时/句末标点断句则为空；
+  // 取新增区间前最多两条记录的尾字（单条记录可能不足 3 字）
+  std::string ctx;
+  if (start > 0 && !timeout && !g_sentence_broken) {
+    ctx = LastChars((start > 1 ? valid[start - 2]->text : std::string()) +
+                        valid[start - 1]->text,
+                    3);
   }
   for (size_t i = start; i < valid.size(); ++i) {
     const std::string& cur = valid[i]->text;
-    // 词内字对：整词上屏（单条 commit 记录）时记录间 bigram 学不到词内组合
-    LearnWordPairs(cur, now);
-    if (i > 0) {
-      const std::string& prev = valid[i - 1]->text;
-      // 新增首对即跨 commit 边界：超时断句或上句以句末标点结束则不学
-      const bool blocked = (i == start) && (timeout || g_sentence_broken);
-      if (!blocked && StartsWithHan(prev) && StartsWithHan(cur)) {
-        LearnPair(g_word_bigrams, prev, cur, now);
-      }
+    if (!ctx.empty()) {
+      LearnContinuation(ctx, cur, now);  // 词值：上文 → 整个提交单位
     }
+    // 字值：逐字学习，run 滚动保持 ≤3 字前缀
+    std::string run = ctx;
+    for (size_t j = 0; j < cur.size();) {
+      const size_t len = Utf8CharLen((unsigned char)cur[j]);
+      const std::string ch = cur.substr(j, len);
+      if (!run.empty()) LearnContinuation(run, ch, now);
+      run = LastChars(run + ch, 3);
+      j += len;
+    }
+    // 句末标点断句：上下文重置，后续记录重新开始
+    ctx = EndsSentence(cur) ? std::string() : run;
     g_sentence_broken = EndsSentence(cur);
   }
   g_last_learned_type = valid.back()->type;
@@ -807,39 +894,32 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeAssociateList(JNIEnv* env, jclass,
     const char* text = env->GetStringUTFChars(key, nullptr);
     if (text) {
       rime::PredictEngine* engine = AcquirePredictEngine();
-      std::string query = text;
-      // 预测 key 为词级（如“就”“今天”），光标前文本可能是完整句子——
-      // 整串精确匹配失败时按 UTF-8 码点去掉前缀字符逐级回退（如“我们今天就”→“就”）；
-      // 每级先查动态学习数据（用户习惯优先，按 EMA 衰减分降序），再查静态 predict.db 补充
       const int64_t now_ms = NowMs();
-      while (!query.empty()) {
-        bool hit = false;
-        // ① 动态：词级/字级双通道按 EMA 衰减分合并排序（最多 5 条，与候选栏显示量一致）
-        std::vector<std::pair<double, const std::string*>> items;
-        auto collect = [&](const BigramChannel& ch) {
-          auto dit = ch.find(query);
-          if (dit == ch.end()) return;
+      // ① 动态：统一续接模型——取原文末 ≤3 字，3→2→1 最长匹配回退
+      //    （最多 5 条，与候选栏显示量一致，按 EMA 衰减分降序）
+      std::string ctx = LastChars(text, 3);
+      while (!ctx.empty()) {
+        auto dit = g_continuations.find(ctx);
+        if (dit != g_continuations.end() && !dit->second.empty()) {
+          std::vector<std::pair<double, const std::string*>> items;
           for (const auto& vc : dit->second) {
             items.emplace_back(EntryScore(vc.second, now_ms), &vc.first);
           }
-        };
-        collect(g_word_bigrams);
-        collect(g_char_bigrams);
-        if (!items.empty()) {
           std::sort(items.begin(), items.end(),
                     [](const auto& a, const auto& b) { return a.first > b.first; });
           for (const auto& iv : items) {
-            // 词对/字对的 value 可能重复（如单字词），去重
-            if (std::find(g_associate_words.begin(), g_associate_words.end(),
-                          *iv.second) != g_associate_words.end()) {
-              continue;
-            }
             g_associate_words.push_back(*iv.second);
             if (g_associate_words.size() >= 5) break;
           }
-          hit = true;
+          break;  // 最长匹配命中即停，不用短键结果稀释精度
         }
-        // ② 静态：predict.db（补充动态未覆盖的词，去重，总上限 10）
+        ctx = StripFirstChar(ctx);
+      }
+      // ② 静态：predict.db——词级键，光标前文本可能是完整句子，整串精确匹配
+      //    失败时按 UTF-8 码点剥离前缀逐级回退（如“我们今天就”→“就”）；
+      //    补充动态未覆盖的词，去重，总上限 10
+      std::string query = text;
+      while (!query.empty()) {
         if (engine && engine->Predict(nullptr, query)) {
           int n = engine->num_candidates();
           for (int i = 0; i < n; ++i) {
@@ -850,17 +930,9 @@ Java_com_yuyan_inputmethod_core_Rime_getRimeAssociateList(JNIEnv* env, jclass,
               if (g_associate_words.size() >= 10) break;
             }
           }
-          hit = true;
+          break;
         }
-        if (hit) break;
-        // 去掉第一个 UTF-8 码点后继续回退
-        size_t first = 1;
-        unsigned char c = (unsigned char)query[0];
-        if (c >= 0xF0) first = 4;
-        else if (c >= 0xE0) first = 3;
-        else if (c >= 0xC0) first = 2;
-        if (first >= query.size()) break;
-        query = query.substr(first);
+        query = StripFirstChar(query);
       }
       env->ReleaseStringUTFChars(key, text);
     }

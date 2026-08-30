@@ -236,7 +236,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             R.string.clipboard_limit,
             "clipboard_limit",
             9999,
-            10,
+            500,
             99999,
             "条",
             10,

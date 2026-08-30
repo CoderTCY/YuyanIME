@@ -24,11 +24,7 @@ class EditTextIntPreference(context: Context) : EditTextPreference(context) {
     }
 
     override fun onSetInitialValue(defaultValue: Any?) {
-        // setDefaultValue 传入的是 String（ManagedPreferenceUi.EditTextInt 传
-        // defaultValue.toString()），需解析为 Int 后再走 getPersistedInt：
-        // 有持久化值则读之，无则用 defaultValue
-        val def = (defaultValue as? Int) ?: (defaultValue as? String)?.toIntOrNull() ?: 0
-        value = getPersistedInt(def)
+        value = defaultValue as? Int ?: getPersistedInt(0)
     }
 
     init {

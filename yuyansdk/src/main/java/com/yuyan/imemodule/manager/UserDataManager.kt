@@ -3,7 +3,7 @@ package com.yuyan.imemodule.manager
 import com.yuyan.imemodule.BuildConfig
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.application.CustomConstant
-import com.yuyan.imemodule.application.Launcher
+import com.yuyan.inputmethod.core.Rime
 import com.yuyan.imemodule.utils.errorRuntime
 import com.yuyan.imemodule.utils.extract
 import com.yuyan.imemodule.utils.withTempDir
@@ -105,6 +105,12 @@ object UserDataManager {
                 ?.forEach { dir ->
                     writeFileTree(dir, dir.name, zipStream)
                 }
+            // 联想学习记忆（自研 bigram EMA 模型，与 rime 词频独立但同目录）
+            val predictFile = File(rimeDir, "user_predict.txt")
+            if (predictFile.exists()) {
+                zipStream.putNextEntry(ZipEntry("user_predict.txt"))
+                predictFile.inputStream().use { it.copyTo(zipStream) }
+            }
         }
     }
 
@@ -124,6 +130,13 @@ object UserDataManager {
                     tempDir.copyRecursively(target)
                 } else {
                     errorRuntime(R.string.exception_dictionary_empty)
+                }
+                // 联想学习记忆：与词频同备份/同恢复
+                // 先 destroy 引擎，避免 resetIme 的 SaveUserBigrams 覆盖导入文件
+                val predictFile = File(tempDir, "user_predict.txt")
+                if (predictFile.exists()) {
+                    Rime.destroy()
+                    predictFile.copyTo(File(rimeDir, "user_predict.txt"), overwrite = true)
                 }
             }
         }

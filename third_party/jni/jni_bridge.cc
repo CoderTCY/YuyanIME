@@ -1,5 +1,5 @@
 // jni_bridge.cc
-// JNI 桥：保持 com.yuyan.inputmethod.core.Rime 的 16 个 native 方法签名，
+// JNI 桥：com.yuyan.inputmethod.core.Rime 的 15 个 native 方法签名，
 // 引擎主体为官方 librime（静态库 rime-static 链接进 libyuyanime.so）。
 //
 // 与旧 yuyan 定制引擎的差异适配：
@@ -15,8 +15,7 @@
 //     统一续接模型——commit_history 拍平为字符流，键=上文末 1~3 字、值=续接串
 //     （字或词），EMA 衰减，落盘 user_predict.txt（#v3 增量+压实），查询时
 //     动态数据优先；app 层 CustomEngine 兜底。
-//  5. setRimePageSize：no-op——候选页大小由重建后的 schema yaml 的 menu/page_size 配置
-//  6. getRimeKeycodeByName：自建 X11 keysym 映射表（app 仅用 Page_Down/BackSpace）
+//  5. getRimeKeycodeByName：自建 X11 keysym 映射表（app 仅用 Page_Down/BackSpace）
 
 #include <jni.h>
 
@@ -241,12 +240,6 @@ Java_com_yuyan_inputmethod_core_Rime_exitRime(JNIEnv* /*env*/, jclass) {
   g_pending_associate = -1;
   g_candidate_index_map.clear();
 }
-
-// 候选页大小由 schema yaml 的 menu/page_size 配置（重建 schema 时设为 100），no-op
-extern "C" JNIEXPORT void JNICALL
-Java_com_yuyan_inputmethod_core_Rime_setRimePageSize(JNIEnv* /*env*/, jclass,
-                                                     jint /*pageSize*/) {}
-
 // ---------------------------------------------------------------------------
 // 输入
 // ---------------------------------------------------------------------------

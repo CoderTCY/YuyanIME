@@ -12,7 +12,7 @@
 #   stroke / handwriting：项目自有（stroke 用旧 bin + 标准展开 schema；handwriting 占位）
 # 通用裁剪：删 lua_processor/lua_translator/lua_filter（官方 librime 无 lua 插件）、
 #   radical 拆字反查（依赖额外词典）、recognizer 的 lua patterns；
-#   menu/page_size 5 -> 100（setRimePageSize no-op 的配套方案）。
+#   menu/page_size 5 -> 100（固定每页候选数，无运行时调页 API）。
 #
 # 用法：powershell -File third_party/scripts/prepare-rime-ice.ps1
 

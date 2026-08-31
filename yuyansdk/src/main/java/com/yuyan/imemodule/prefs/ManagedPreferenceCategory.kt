@@ -84,6 +84,29 @@ abstract class ManagedPreferenceCategory(
         return pref
     }
 
+    /**
+     * 强制文本输入的整数偏好：不走 [int] 的 SeekBar/EditText 自动选择。
+     * 用于取值范围无“步进”语义、SeekBar 滑动体验无意义的配置项。
+     */
+    protected fun editInt(
+        @StringRes
+        title: Int,
+        key: String,
+        defaultValue: Int,
+        min: Int = 0,
+        max: Int = Int.MAX_VALUE,
+        unit: String = "",
+        enableUiOn: (() -> Boolean)? = null
+    ): ManagedPreference.PInt {
+        val pref = ManagedPreference.PInt(sharedPreferences, key, defaultValue)
+        val ui = ManagedPreferenceUi.EditTextInt(
+            title, key, defaultValue, min, max, unit, enableUiOn
+        )
+        pref.register()
+        ui.registerUi()
+        return pref
+    }
+
     protected fun twinInt(
         @StringRes
         title: Int,

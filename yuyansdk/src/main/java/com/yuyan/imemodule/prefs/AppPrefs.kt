@@ -232,15 +232,13 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
 
     inner class Clipboard : ManagedPreferenceCategory(R.string.clipboard, sharedPreferences) {
         val clipboardListening = switch(R.string.clipboard_listening, "clipboard_enable", true)
-        val clipboardHistoryLimit = int(
+        val clipboardHistoryLimit = editInt(
             R.string.clipboard_limit,
             "clipboard_limit",
             9999,
-            500,
+            50,
             99999,
-            "条",
-            10,
-            defaultLabel = R.string.num_50
+            "条"
         ) { clipboardListening.getValue() }
         val clipboardSuggestion = switch(
             R.string.clipboard_suggestion, "clipboard_suggestion", true

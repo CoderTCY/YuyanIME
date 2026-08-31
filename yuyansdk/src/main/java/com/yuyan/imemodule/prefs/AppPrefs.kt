@@ -112,7 +112,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
 
     inner class KeyboardSetting : ManagedPreferenceCategory(R.string.setting_ime_keyboard, sharedPreferences) {
 
-        val candidateTextSize = int(
+        val candidateTextSize = seekInt(
             R.string.candidate_size_input_setting,
             "candidate_size",
             55,
@@ -124,7 +124,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
 
         val keyboardBalloonShow = switch(R.string.keypopup_input_settings, "keyboard_balloon_show_enable", false)
 
-        val longPressTimeout = int(
+        val longPressTimeout = seekInt(
             R.string.long_press_timeout,
             "long_press_timeout",
             400,
@@ -146,7 +146,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
 
         val spaceSwipeMoveCursor = switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)
 
-        val spaceSwipeMoveCursorSpeed = int(
+        val spaceSwipeMoveCursorSpeed = seekInt(
             R.string.swipe_move_cursor_speed,
             "swipe_move_cursor_speed",
             10,
@@ -208,7 +208,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
     inner class Handwriting : ManagedPreferenceCategory(R.string.setting_ime_input, sharedPreferences) {
 
 
-        val handWritingWidth = int(
+        val handWritingWidth = seekInt(
             R.string.paint_thickness,
             "hand_writing_width",
             35,
@@ -218,7 +218,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             defaultLabel = R.string.system_default
         )
 
-        val handWritingSpeed = int(
+        val handWritingSpeed = seekInt(
             R.string.discern_sensitive,
             "hand_writing_speed",
             500,
@@ -243,14 +243,14 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val clipboardSuggestion = switch(
             R.string.clipboard_suggestion, "clipboard_suggestion", true
         ) { clipboardListening.getValue() }
-        val clipboardItemTimeout = int(
+        val clipboardItemTimeout = seekInt(
             R.string.clipboard_suggestion_timeout,
             "clipboard_item_timeout",
             30,
             10,
             200,
             "秒"
-        ) { clipboardListening.getValue() && clipboardSuggestion.getValue() }
+        )
 
         val clipboardLayoutCompact = list(
             R.string.clipboard_layout_compact_mode,

@@ -92,7 +92,7 @@ class ThemePrefs(sharedPreferences: SharedPreferences) :
     val keyboardFontBold =
         switch(R.string.keyboard_font_bold, "keyboard_font_bold_enable", true)
 
-    val keyboardFontSize = int(
+    val keyboardFontSize = seekInt(
         R.string.keyboard_font_size,
         "keyboard_font_size",
         100,
@@ -148,14 +148,12 @@ class ThemePrefs(sharedPreferences: SharedPreferences) :
         keyYMargin = secondary
     }
 
-    val keyRadius = int(
+    val keyRadius = seekInt(
         R.string.key_radius,
         "key_radius",
         20,
         0,
         60,
         "dp"
-    ) {
-        keyBorder.getValue()
-    }
+    )
 }

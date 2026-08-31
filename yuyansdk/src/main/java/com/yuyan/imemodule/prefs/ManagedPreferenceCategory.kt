@@ -56,7 +56,10 @@ abstract class ManagedPreferenceCategory(
         return pref
     }
 
-    protected fun int(
+    /**
+     * 滑块整数偏好。文本输入见 [editInt]。
+     */
+    protected fun seekInt(
         @StringRes
         title: Int,
         key: String,
@@ -70,23 +73,16 @@ abstract class ManagedPreferenceCategory(
         enableUiOn: (() -> Boolean)? = null
     ): ManagedPreference.PInt {
         val pref = ManagedPreference.PInt(sharedPreferences, key, defaultValue)
-        // Int can overflow when min < 0 && max == Int.MAX_VALUE
-        val ui = if ((max.toLong() - min.toLong()) / step.toLong() >= 500L)
-            ManagedPreferenceUi.EditTextInt(
-                title, key, defaultValue, min, max, unit, enableUiOn
-            )
-        else
-            ManagedPreferenceUi.SeekBarInt(
-                title, key, defaultValue, min, max, unit, step, defaultLabel, enableUiOn
-            )
+        val ui = ManagedPreferenceUi.SeekBarInt(
+            title, key, defaultValue, min, max, unit, step, defaultLabel, enableUiOn
+        )
         pref.register()
         ui.registerUi()
         return pref
     }
 
     /**
-     * 强制文本输入的整数偏好：不走 [int] 的 SeekBar/EditText 自动选择。
-     * 用于取值范围无“步进”语义、SeekBar 滑动体验无意义的配置项。
+     * 文本输入整数偏好：用于取值范围无“步进”语义、SeekBar 滑动体验无意义的配置项。
      */
     protected fun editInt(
         @StringRes

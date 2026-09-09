@@ -3,6 +3,9 @@ package com.yuyan.imemodule.ui.fragment
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
 import androidx.annotation.StringRes
@@ -16,6 +19,13 @@ import com.yuyan.imemodule.utils.addCategory
 import com.yuyan.imemodule.utils.addPreference
 import androidx.core.net.toUri
 import com.yuyan.imemodule.ui.setup.SetupActivity
+import splitties.dimensions.dp
+import splitties.views.dsl.core.add
+import splitties.views.dsl.core.editText
+import splitties.views.dsl.core.lParams
+import splitties.views.dsl.core.matchParent
+import splitties.views.dsl.core.verticalLayout
+import splitties.views.dsl.core.wrapContent
 
 class ImeSettingsFragment : PreferenceFragmentCompat() {
 
@@ -28,6 +38,24 @@ class ImeSettingsFragment : PreferenceFragmentCompat() {
             findNavController().navigate(destination)
         }
     }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val superView = super.onCreateView(inflater, container, savedInstanceState)
+        val ctx = requireContext()
+        return ctx.verticalLayout {
+            add(ctx.editText {
+                hint = ctx.getString(R.string.setting_test_input)
+                setSingleLine(true)
+                setPadding(dp(16), dp(8), dp(16), dp(8))
+            }, lParams(width = matchParent, height = wrapContent))
+            add(superView, lParams(width = matchParent, height = matchParent, weight = 1f))
+        }
+    }
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceScreen = preferenceManager.createPreferenceScreen(requireContext()).apply {
             addCategory(R.string.input_methods) {

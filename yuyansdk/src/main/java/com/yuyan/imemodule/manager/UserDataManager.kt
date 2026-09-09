@@ -3,6 +3,7 @@ package com.yuyan.imemodule.manager
 import com.yuyan.imemodule.BuildConfig
 import com.yuyan.imemodule.R
 import com.yuyan.imemodule.application.CustomConstant
+import com.yuyan.imemodule.application.Launcher
 import com.yuyan.inputmethod.core.Rime
 import com.yuyan.imemodule.utils.errorRuntime
 import com.yuyan.imemodule.utils.extract

@@ -69,10 +69,13 @@ android {
         }
     }
 
-    // 多渠道：flavor 维度由 yuyansdk 声明，app 用 missingDimensionStrategy 委托匹配，
-    // 避免两模块各自声明 productFlavors 导致手工同步漂移；applicationIdSuffix
-    // 放在 defaultConfig，与 buildType suffix 叠加（.offline.release/.offline.debug）
-    missingDimensionStrategy "default", "offline"
+    // AGP 8.x 移除了 missingDimensionStrategy，需显式声明 flavor 以匹配 yuyansdk
+    flavorDimensions = ["default"]
+    productFlavors {
+        offline {
+            dimension "default"
+        }
+    }
 
     buildTypes {
         release {

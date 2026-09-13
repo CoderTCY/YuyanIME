@@ -262,6 +262,31 @@ Java_com_yuyan_inputmethod_core_Rime_processRimeKey(JNIEnv* /*env*/, jclass,
   return g_api->process_key(g_session, kc, mk) ? JNI_TRUE : JNI_FALSE;
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_yuyan_inputmethod_core_Rime_getRimeInput(JNIEnv* env, jclass) {
+  return ToJString(env, g_api && g_session ? g_api->get_input(g_session) : "");
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_yuyan_inputmethod_core_Rime_moveRimeCaret(JNIEnv* /*env*/, jclass,
+                                                 jint direction) {
+  if (!g_api || !g_session) return JNI_FALSE;
+  const char* input = g_api->get_input(g_session);
+  if (!input || !*input) return JNI_FALSE;
+  const size_t position = g_api->get_caret_pos(g_session);
+  const size_t length = std::strlen(input);
+  // 边界仍消费手势，不循环到另一端，也不把方向键发送给编辑器。
+  if ((direction < 0 && position == 0) ||
+      (direction > 0 && position >= length) || direction == 0) {
+    return JNI_TRUE;
+  }
+  if (auto session = rime::Service::instance().GetSession(g_session)) {
+    session->context()->BeginEditing();
+  }
+  g_api->set_caret_pos(g_session, direction < 0 ? position - 1 : position + 1);
+  return JNI_TRUE;
+}
+
 // 局部替换输入串（T9/乱序17 选择拼音后把拼音段替换为键码）。
 // 官方 C API 无局部替换；set_input 不刷新候选，需补 RefreshNonConfirmedComposition。
 extern "C" JNIEXPORT jboolean JNICALL

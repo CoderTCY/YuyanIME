@@ -23,6 +23,11 @@ object Kernel {
         RimeEngine.onNormalKey(event)
     }
 
+    fun moveCompositionCursor(direction: Int): Boolean = RimeEngine.moveCompositionCursor(direction)
+
+    val compositionCursorPosition: Int
+        get() = RimeEngine.compositionCursorPosition
+
     // 是否输入完毕，等待上屏。
     val isFinish: Boolean
         get() = RimeEngine.isFinish()

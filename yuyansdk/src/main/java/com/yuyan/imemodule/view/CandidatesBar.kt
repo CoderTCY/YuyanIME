@@ -1,6 +1,8 @@
 package com.yuyan.imemodule.view
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
@@ -77,7 +79,25 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
                 orientation = LinearLayout.VERTICAL
                 visibility = GONE
             }
-            mComposingView = TextView(context).apply {
+            mComposingView = object : TextView(context) {
+                private val cursorPaint = Paint()
+
+                override fun onDraw(canvas: Canvas) {
+                    super.onDraw(canvas)
+                    val offset = DecodingInfo.composingCursorPosition
+                    val textLayout = layout ?: return
+                    if (offset !in 0..text.length || text.isEmpty()) return
+                    val line = textLayout.getLineForOffset(offset)
+                    val x = totalPaddingLeft + textLayout.getPrimaryHorizontal(offset)
+                    cursorPaint.color = currentTextColor
+                    cursorPaint.strokeWidth = dp(1).toFloat()
+                    canvas.drawLine(
+                        x, (totalPaddingTop + textLayout.getLineTop(line)).toFloat(),
+                        x, (totalPaddingTop + textLayout.getLineBottom(line)).toFloat(), cursorPaint
+                    )
+                }
+            }.apply {
+                setSingleLine()
                 includeFontPadding = false
                 setPadding(dp(10), 0, dp(10), 0)
             }
@@ -256,7 +276,7 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
     private var pendingMenuJob: Job? = null
     private val serviceScope = MainScope()
     fun scheduleShowCandidates() {
-        if (!DecodingInfo.isCandidatesEmpty) {
+        if (!DecodingInfo.isCandidatesEmpty || DecodingInfo.composingStrForDisplay.isNotEmpty()) {
             pendingMenuJob?.cancel()
             pendingMenuJob = null
             showCandidates()
@@ -275,6 +295,10 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
      */
     fun showCandidates() {
         mComposingView.text = DecodingInfo.composingStrForDisplay
+        if (DecodingInfo.composingCursorPosition >= 0) {
+            mComposingView.bringPointIntoView(DecodingInfo.composingCursorPosition)
+            mComposingView.invalidate()
+        }
         val container = KeyboardManager.instance.currentContainer
         mIvMenuSetting.drawable.setLevel( if(container is InputBaseContainer) 0 else 1)
         if (container is ClipBoardContainer) {
@@ -284,8 +308,8 @@ class CandidatesBar(context: Context?, attrs: AttributeSet?) : RelativeLayout(co
             } else {
                 listOf(menuSkbFunsPreset[SkbMenuMode.AddPhrases]!!, menuSkbFunsPreset[SkbMenuMode.ClipBoard]!!, menuSkbFunsPreset[SkbMenuMode.Phrases]!!, menuSkbFunsPreset[SkbMenuMode.LockClipBoard]!!)
             }
-        } else if (container is SymbolContainer || DecodingInfo.isCandidatesEmpty) {
-            // 符号键盘只显示顶部菜单栏（不显示候选词），与无候选时一致
+        } else if (container is SymbolContainer || (DecodingInfo.isCandidatesEmpty && DecodingInfo.composingStrForDisplay.isEmpty())) {
+            // 符号键盘或空闲状态显示菜单；无候选的未完成输入仍保留预览框。
             mRightArrowBtn.drawable.setLevel(0)
             showViewVisibility(mCandidatesMenuContainer)
             val mFunItems: MutableList<SkbFunItem> = mutableListOf()

@@ -57,10 +57,53 @@ class KeyRecordStack {
                     keyRecords.add(InputKey.QwertKey(keyChar))
                 }
             } else -> {
-                keyRecords.add(InputKey.DefaultAction)
+                keyRecords.add(InputKey.QwertKey(keyChar))
             }
         }
         return true
+    }
+
+    // 光标编辑后按引擎输入串同步记录，不能再把中间的插入/删除当作栈尾操作。
+    fun updateInput(previous: String, current: String) {
+        var index = 0
+        while (index < keyRecords.size) {
+            when (val key = keyRecords[index]) {
+                is InputKey.PinyinKey -> {
+                    keyRecords.removeAt(index)
+                    key.pinyin().forEach { char ->
+                        keyRecords.add(index++, if (char == '\'') InputKey.Apostrophe() else InputKey.QwertKey(char))
+                    }
+                }
+                InputKey.DefaultAction, InputKey.SelectPinyinAction -> keyRecords.removeAt(index)
+                is InputKey.Apostrophe -> if (key.dummy) keyRecords.removeAt(index) else index++
+                else -> index++
+            }
+        }
+        var start = 0
+        var oldEnd = previous.length
+        var newEnd = current.length
+        if (keyRecords.size == previous.length) {
+            while (start < oldEnd && start < newEnd && previous[start] == current[start]) start++
+            while (oldEnd > start && newEnd > start && previous[oldEnd - 1] == current[newEnd - 1]) {
+                oldEnd--
+                newEnd--
+            }
+            keyRecords.subList(start, oldEnd).clear()
+        } else {
+            // 段确认可改变引擎输入长度；引擎状态是记录重建的依据。
+            keyRecords.clear()
+        }
+        val schema = Rime.getCurrentRimeSchema()
+        val useT9Keys = schema == CustomConstant.SCHEMA_ZH_T9 || schema == CustomConstant.SCHEMA_ZH_DOUBLE_LX17
+        for (position in start until newEnd) {
+            val char = current[position]
+            val key = when {
+                char == '\'' -> InputKey.Apostrophe()
+                useT9Keys -> InputKey.T9Key(char.uppercaseChar())
+                else -> InputKey.QwertKey(char)
+            }
+            keyRecords.add(position, key)
+        }
     }
 
     fun pushPinyinSelectAction(pinyin: String?): InputKey.PinyinKey? {
@@ -85,6 +128,7 @@ class KeyRecordStack {
                 record.toString() == keys[j].toString() && record is InputKey.T9Key && !record.consumed
             }
         }
+        if (index < 0) return null
         repeat(keys.size) {
             keyRecords.removeAt(index)
         }
@@ -96,7 +140,8 @@ class KeyRecordStack {
         keyRecords.add(index, InputKey.PinyinKey(pinyin))
         posInInput = keyRecords.subList(0, index).fold(0) { acc, inputKey ->
             acc + when (inputKey) {
-                is InputKey.T9Key, is InputKey.Apostrophe -> 1
+                is InputKey.T9Key, is InputKey.QwertKey -> 1
+                is InputKey.Apostrophe -> if (inputKey.dummy) 0 else 1
                 is InputKey.PinyinKey -> inputKey.inputKeyLength
                 else -> 0
             }

@@ -410,9 +410,11 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
     private fun processFunctionKey(event: KeyEvent) {
         when (val keyCode = event.keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_SPACE -> {
-                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
+                if ((DecodingInfo.isCandidatesEmpty && DecodingInfo.isEngineFinish) || DecodingInfo.isAssociate) {
                     sendKeyEvent(keyCode)
                     resetToIdleState()
+                } else if (DecodingInfo.isCandidatesEmpty) {
+                    commitDecInfoText(DecodingInfo.composingStrForCommit)
                 } else if (keyCode == KeyEvent.KEYCODE_SPACE && InputModeSwitcher.isEnglish) {
                     // 英文单词补全时，按空格退出补全并追加空格
                     val candId = mSkbCandidatesBarView.getActiveCandNo()
@@ -429,7 +431,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
             KeyEvent.KEYCODE_CLEAR -> resetToIdleState()
             KeyEvent.KEYCODE_ENTER -> {
-                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
+                if ((DecodingInfo.isCandidatesEmpty && DecodingInfo.isEngineFinish) || DecodingInfo.isAssociate) sendKeyEvent(keyCode)
                 else commitDecInfoText(DecodingInfo.composingStrForCommit)
                 resetToIdleState()
             }
@@ -508,8 +510,15 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         val label = keyChar.toChar().toString()
 
         return when {
+            (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) &&
+                InputModeSwitcher.isChinese && DecodingInfo.moveCompositionCursor(
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1
+                ) -> {
+                (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
+                true
+            }
             keyCode == KeyEvent.KEYCODE_DEL -> {
-                if (DecodingInfo.isCandidatesEmpty || DecodingInfo.isAssociate) {
+                if (DecodingInfo.isEngineFinish || DecodingInfo.isAssociate) {
                     service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
                     sendKeyEvent(keyCode)
                 } else {
@@ -569,7 +578,7 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         DecodingInfo.updateDecodingCandidate()
         if (!DecodingInfo.isCandidatesEmpty) {
             (KeyboardManager.instance.currentContainer as? T9TextContainer)?.updateSymbolListView()
-        } else {
+        } else if (DecodingInfo.isEngineFinish) {
             resetToIdleState()
         }
         if (InputModeSwitcher.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)

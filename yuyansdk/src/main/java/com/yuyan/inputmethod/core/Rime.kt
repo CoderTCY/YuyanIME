@@ -79,6 +79,10 @@ class Rime(fullCheck: Boolean) {
             }
         }
 
+        fun moveCaret(direction: Int): Boolean {
+            return moveRimeCaret(direction).also { updateContext() }
+        }
+
         @JvmStatic
         fun replaceKey(caretPos: Int, length: Int, key: String): Boolean {
             return replaceRimeKey(caretPos, length, key).also {
@@ -135,6 +139,12 @@ class Rime(fullCheck: Boolean) {
 
         @JvmStatic
         external fun processRimeKey(keycode: Int, mask: Int): Boolean
+
+        @JvmStatic
+        external fun getRimeInput(): String
+
+        @JvmStatic
+        external fun moveRimeCaret(direction: Int): Boolean
 
         @JvmStatic
         external fun replaceRimeKey(caretPos: Int, length: Int, key: String?): Boolean

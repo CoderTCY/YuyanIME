@@ -25,8 +25,8 @@ object DecodingInfo {
         isAssociate = false
         activeCandidate = 0
         activeCandidateBar = 0
-        candidatesLiveData.value = emptyList()
         Kernel.reset()
+        candidatesLiveData.value = emptyList()
     }
 
     fun clearAssociationHistory() {
@@ -83,6 +83,15 @@ object DecodingInfo {
 
     val composingStrForDisplay: String   //获取显示的拼音字符串/
         get() = Kernel.wordsShowPinyin
+
+    val composingCursorPosition: Int
+        get() = Kernel.compositionCursorPosition
+
+    fun moveCompositionCursor(direction: Int): Boolean {
+        if (isAssociate || !Kernel.moveCompositionCursor(direction)) return false
+        updateDecodingCandidate()
+        return true
+    }
 
     val composingStrForCommit: String   // 获取输入的拼音字符串
         get() = Kernel.wordsShowPinyin.replace("'", "").replace(" ", "").ifEmpty { getCandidate(0)?.text?:""}

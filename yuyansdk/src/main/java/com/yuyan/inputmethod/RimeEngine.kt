@@ -23,6 +23,9 @@ object RimeEngine {
     var preCommitText: String = "" // 待提交的文字
     const val MASK_CASE_LOWER = 0
     private var charCase = 0x0000
+    private var isComposingCursorActive = false
+    var compositionCursorPosition = -1
+        private set
     fun init() {
         Rime.getInstance(false)
     }
@@ -42,20 +45,37 @@ object RimeEngine {
      * 是否输入完毕
      */
     fun isFinish(): Boolean {
-        return keyRecordStack.isEmpty()
+        return !Rime.isComposing
     }
 
     fun onNormalKey(event: KeyEvent) {
         val keyCode = event.keyCode
         val keyChar = if(keyCode == KeyEvent.KEYCODE_APOSTROPHE) if(isFinish()) '/'.code else '\''.code
             else event.unicodeChar
-        if (keyRecordStack.pushKey(event))Rime.processKey(keyChar, event.action)
+        if (isComposingCursorActive) {
+            val previous = Rime.getRimeInput()
+            Rime.processKey(keyChar, event.metaState)
+            keyRecordStack.updateInput(previous, Rime.getRimeInput())
+        } else if (keyRecordStack.pushKey(event)) Rime.processKey(keyChar, event.action)
         updateCandidatesOrCommitText()
     }
 
     fun onDeleteKey() {
-        processDelAction()
+        if (isComposingCursorActive) {
+            val previous = Rime.getRimeInput()
+            Rime.processKey(getRimeKeycodeByName("BackSpace"), 0)
+            keyRecordStack.updateInput(previous, Rime.getRimeInput())
+        } else {
+            processDelAction()
+        }
         updateCandidatesOrCommitText()
+    }
+
+    fun moveCompositionCursor(direction: Int): Boolean {
+        if (showComposition.isEmpty() || !Rime.moveCaret(direction)) return false
+        isComposingCursorActive = true
+        updateCandidatesOrCommitText()
+        return true
     }
 
     fun selectCandidate(index: Int): String? {
@@ -128,6 +148,8 @@ object RimeEngine {
         showCandidates = emptyList()
         pinyins = emptyArray()
         showComposition = ""
+        isComposingCursorActive = false
+        compositionCursorPosition = -1
         preCommitText = ""
         keyRecordStack.clear()
         Rime.clearComposition()
@@ -175,6 +197,8 @@ object RimeEngine {
             // rime 提交的即词条/输入原文（如 iPhone、JavaScript），不做大小写转换
             preCommitText = rimeCommit.commitText
             showComposition = ""
+            isComposingCursorActive = false
+            compositionCursorPosition = -1
             showCandidates = emptyList()
             return preCommitText
         }
@@ -239,6 +263,23 @@ object RimeEngine {
             }
         }
         showComposition = composition
+        compositionCursorPosition = if (isComposingCursorActive && composition.isNotEmpty()) {
+            // librime 的 preedit 光标以 UTF-8 字节计数，TextView 使用 UTF-16 偏移。
+            val byteOffset = Rime.composition?.cursorPos ?: 0
+            var bytes = 0
+            var offset = 0
+            while (offset < composition.length && bytes < byteOffset) {
+                val codePoint = composition.codePointAt(offset)
+                bytes += when {
+                    codePoint <= 0x7f -> 1
+                    codePoint <= 0x7ff -> 2
+                    codePoint <= 0xffff -> 3
+                    else -> 4
+                }
+                offset += Character.charCount(codePoint)
+            }
+            offset
+        } else -1
         preCommitText = ""
         return null
     }
@@ -307,6 +348,12 @@ object RimeEngine {
         val rimeSchema = Rime.getCurrentRimeSchema()
         if(rimeSchema == CustomConstant.SCHEMA_EN) return ""
         if(composition.isEmpty()) return ""
+        // 光标编辑时直接显示完整 preedit；候选注音转换可能截掉光标右侧的输入。
+        if (isComposingCursorActive) {
+            return if (rimeSchema == CustomConstant.SCHEMA_ZH_T9 || rimeSchema == CustomConstant.SCHEMA_ZH_DOUBLE_LX17) {
+                composition.uppercase()
+            } else composition
+        }
         if(candidates.isEmpty()) return composition
         val comment = candidates.first().comment
         val result = when {

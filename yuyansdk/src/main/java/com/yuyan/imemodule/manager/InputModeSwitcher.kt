@@ -221,8 +221,9 @@ object InputModeSwitcher {
             EditorInfo.TYPE_CLASS_NUMBER, EditorInfo.TYPE_CLASS_PHONE, EditorInfo.TYPE_CLASS_DATETIME -> newInputMode = MASK_SKB_LAYOUT_NUMBER
             else -> {
                 val v = editorInfo.inputType and EditorInfo.TYPE_MASK_VARIATION
-                newInputMode = if (v == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
-                    || v == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
+                val isPasswordVariation = v == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD || v == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                    || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD
+                newInputMode = if (v == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS || isPasswordVariation) {
                     MODE_SKB_ENGLISH_LOWER
                 } else if(getInstance().keyboardSetting.keyboardLockEnglish.getValue()){
                     getInstance().internal.inputDefaultMode.getValue()
@@ -231,6 +232,10 @@ object InputModeSwitcher {
                 }
             }
         }
+        isPasswordField = editorInfo.inputType and EditorInfo.TYPE_MASK_CLASS == EditorInfo.TYPE_CLASS_TEXT
+            && (editorInfo.inputType and EditorInfo.TYPE_MASK_VARIATION).let { v ->
+                v == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD || v == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD || v == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD
+            }
         val hasNoEnterAction = (editorInfo.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0
         mToggleStates.imeAction = if(hasNoEnterAction) 0 else editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION
         if (newInputMode != mInputMode && MODE_UNSET != newInputMode) {
@@ -286,6 +291,12 @@ object InputModeSwitcher {
         lsatClickTime = System.currentTimeMillis()
         (KeyboardManager.instance.currentContainer as? InputBaseContainer)?.updateStates()
     }
+
+    /**
+     * 当前编辑框是否为密码框（不可见回显），用于关闭候选/组合文本等明文泄露路径。
+     */
+    var isPasswordField = false
+        private set
 
     val isNumberSkb: Boolean
         /**

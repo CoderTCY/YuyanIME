@@ -93,7 +93,7 @@ object KeyPreset {
         KeyEvent.KEYCODE_P to arrayOf("P", "-"),
         KeyEvent.KEYCODE_A to arrayOf("A", "、"),
         KeyEvent.KEYCODE_S to arrayOf("S", "/"),
-        KeyEvent.KEYCODE_D to arrayOf("D", "\\"),
+        KeyEvent.KEYCODE_D to arrayOf("D", "："),
         KeyEvent.KEYCODE_F to arrayOf("F", "；"),
         KeyEvent.KEYCODE_G to arrayOf("G", "_"),
         KeyEvent.KEYCODE_H to arrayOf("H", "~"),
@@ -157,14 +157,14 @@ object KeyPreset {
     )
 
     val lx17PYKeyPreset: Map<Int, Array<String>> = hashMapOf(
-        KeyEvent.KEYCODE_H to arrayOf( "HP", "-"),
+        KeyEvent.KEYCODE_H to arrayOf( "HP", "："),
         KeyEvent.KEYCODE_S to arrayOf("Sh", "/"),
         KeyEvent.KEYCODE_Z to arrayOf("Zh", "\\"),
         KeyEvent.KEYCODE_B to arrayOf("B", "；"),
         KeyEvent.KEYCODE_X to arrayOf("oXv", "（"),
         KeyEvent.KEYCODE_M to arrayOf("MS", "）"),
-        KeyEvent.KEYCODE_L to arrayOf("L", "～"),
-        KeyEvent.KEYCODE_D to arrayOf("D", "“"),
+        KeyEvent.KEYCODE_L to arrayOf("L", "（"),
+        KeyEvent.KEYCODE_D to arrayOf("D", "）"),
         KeyEvent.KEYCODE_Y to arrayOf("Y", "”"),
         KeyEvent.KEYCODE_W to arrayOf("WZ", "："),
         KeyEvent.KEYCODE_J to arrayOf("JK", "@"),

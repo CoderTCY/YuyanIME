@@ -77,21 +77,6 @@ object KeyboardData {
             arrayOf(31, 45, 35, 34, 48, 67)),
     )
 
-    val layoutLX17CnWithLeftPrefix: Map<SkbStyleMode, ArrayList<Array<Int>>> = linkedMapOf(
-        SkbStyleMode.Google to arrayListOf(
-            arrayOf(InputModeSwitcher.USER_KEYCODE_LEFT_SYMBOL, 36, 47, 54, 30, 52, 41),
-            arrayOf(40, 32, 53, 51, 38, 42),
-            arrayOf(31, 45, 35, 34, 48, 67)),
-        SkbStyleMode.Samsung to arrayListOf(
-            arrayOf(InputModeSwitcher.USER_KEYCODE_LEFT_SYMBOL, 36, 47, 54, 30, 52, 41),
-            arrayOf(40, 32, 53, 51, 38, 42),
-            arrayOf(31, 45, 35, 34, 48, 67)),
-        SkbStyleMode.Yuyan to arrayListOf(
-            arrayOf(InputModeSwitcher.USER_KEYCODE_LEFT_SYMBOL, 36, 47, 54, 30, 52, 41),
-            arrayOf(40, 32, 53, 51, 38, 42),
-            arrayOf(31, 45, 35, 34, 48, 67)),
-    )
-
     val layoutQwertyEn: Map<SkbStyleMode, ArrayList<Array<Int>>> = linkedMapOf(
         SkbStyleMode.Google to arrayListOf(
             arrayOf(45, 51, 33, 46, 48, 53, 49, 37, 43, 44),

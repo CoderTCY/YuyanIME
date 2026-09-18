@@ -294,7 +294,8 @@ class ImeService : InputMethodService() {
     }
 
     fun getTextBeforeCursor(length:Int) : String {
-        return currentInputConnection.getTextBeforeCursor(length, 0).toString()
+        // InputConnection 契约允许返回 null（连接失效/编辑器不支持），不得转成字面量 "null"
+        return currentInputConnection.getTextBeforeCursor(length, 0)?.toString() ?: ""
     }
 
     fun commitTextEditMenu(id:Int) {

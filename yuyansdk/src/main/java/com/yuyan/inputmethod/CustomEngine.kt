@@ -5,6 +5,7 @@ import com.yuyan.imemodule.utils.StringUtils
 import com.yuyan.imemodule.utils.TimeUtils
 import com.yuyan.imemodule.libs.expression.ExpressionBuilder
 import com.yuyan.imemodule.prefs.AppPrefs.Companion.getInstance
+import java.lang.Character.isIdeographic
 import kotlin.math.roundToInt
 
 object CustomEngine {
@@ -41,7 +42,13 @@ object CustomEngine {
     }
 
     fun predictAssociationWordsChinese(text: String):MutableList<String> {
-        val associations = mutableListOf("，", "。")
+        val associations = mutableListOf<String>()
+        // 仅当上文以汉字（CJK 表意文字）结尾时才补充句读候选——
+        // 标点/西文/数字结尾时不补，避免补全栏里只剩孤立标点
+        if (text.isNotEmpty() && isIdeographic(text.codePointAt(text.length - 1))) {
+            associations.add("，")
+            associations.add("。")
+        }
         val suffixesDays = setOf("大前天", "前天", "昨天", "今天", "明天", "大后天", "后天")
         val suffixesExclamation = setOf("啊", "呀", "呐", "啦", "噢", "哇", "吧", "呗", "了")
         val suffixesQuestion = setOf("吗", "啊", "呢", "吧", "谁", "何", "什么", "哪", "几", "多少", "怎", "难道", "岂", "不")

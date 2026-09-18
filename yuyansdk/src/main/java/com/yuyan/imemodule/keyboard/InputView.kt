@@ -297,7 +297,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
                 if (isAddPhrases) mAddPhrasesLayout.clearPhrasesContent()
                 else service.getTextBeforeCursor(1000).takeIf { it.isNotEmpty() }?.let {
                     DecodingInfo.clearAssociationHistory()
-                    textBeforeCursors.push(it)
+                    // 密码框删除的内容不入恢复队列：恢复手势会把明文重新写回编辑框
+                    if (!InputModeSwitcher.isPasswordField) textBeforeCursors.push(it)
                     service.deleteSurroundingText(1000)
                 }
             }
@@ -360,6 +361,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             return true
         }
         InputModeSwitcher.resetCharCase()
+        // 密码框一律走直发按键路径，绕开中英文引擎的补全/联想（明文候选泄露）
+        if (InputModeSwitcher.isPasswordField) return processEnglishKey(event)
         val englishCellDisable = InputModeSwitcher.isEnglish && !appPrefs.input.abcSearchEnglishCell.getValue()
         return when {
             englishCellDisable -> processEnglishKey(event)
@@ -368,15 +371,16 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         }
 //        return if(appPrefs.input.abcSearchEnglishCell.getValue() || InputModeSwitcherManager.isChinese)processInput(event) else processEnglishKey(event)
     }
-
     private fun processEnglishKey(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
         val keyChar = event.unicodeChar
         val label = keyChar.toChar().toString()
         var result = true
         when {
+            // 密码框直接发送按键事件，不进英文补全引擎（明文候选/学习泄露）
+            InputModeSwitcher.isPasswordField -> if (keyCode != 0) sendKeyEvent(keyCode) else if (label.isNotEmpty()) commitText(label) else result = false
             keyCode == KeyEvent.KEYCODE_DEL -> {
-                service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
+                deleteBeforeCursorByCodePoint()
                 sendKeyEvent(keyCode)
             }
             keyCode in (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) -> {
@@ -504,6 +508,20 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         }
     }
 
+    /**
+     * 按一个 Unicode 码点取光标前文本并压入恢复队列。
+     * emoji 等增补平面字符占 2 个 UTF-16 码元，getTextBeforeCursor(1) 只能取到
+     * 低位代理；恢复手势会把孤立代理写回编辑器形成乱码，故先探测是否为代理对。
+     */
+    private fun deleteBeforeCursorByCodePoint() {
+        val before = service.getTextBeforeCursor(2)
+        if (before.isEmpty()) return
+        val last = before.last()
+        // 良构文本中低位代理必属一个完整代理对，无论编辑器按码元还是码点语义返回
+        val unit = if (Character.isLowSurrogate(last)) 2 else 1
+        service.getTextBeforeCursor(unit).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
+    }
+
     private fun processInput(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
         val keyChar = event.unicodeChar
@@ -519,7 +537,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
             }
             keyCode == KeyEvent.KEYCODE_DEL -> {
                 if (DecodingInfo.isEngineFinish || DecodingInfo.isAssociate) {
-                    service.getTextBeforeCursor(1).takeIf { it.isNotEmpty() }?.let { textBeforeCursors.push(it) }
+                    // 同 processEnglishKey：按码点入恢复队列，代理对不被拆半
+                    deleteBeforeCursorByCodePoint()
                     sendKeyEvent(keyCode)
                 } else {
                     DecodingInfo.deleteAction()
@@ -581,7 +600,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
         } else if (DecodingInfo.isEngineFinish) {
             resetToIdleState()
         }
-        if (InputModeSwitcher.isEnglish) setComposingText(DecodingInfo.composingStrForCommit)
+        // 密码框内禁用组合文本回显：候选栏会显示明文（官方 creating-input-method 安全要求）
+        if (InputModeSwitcher.isEnglish && !InputModeSwitcher.isPasswordField) setComposingText(DecodingInfo.composingStrForCommit)
     }
 
     fun updateCandidateBar() = mSkbCandidatesBarView.scheduleShowCandidates()
@@ -762,6 +782,8 @@ class InputView(context: Context, private val service: ImeService) : LifecycleRe
 
     fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         InputModeSwitcher.requestInputWithSkb(editorInfo)
+        // 删除恢复队列绑定编辑器实例，跨框切换必须清空，否则上一框删除的内容会恢复进新框
+        textBeforeCursors.clear()
         if (!restarting) {
             DecodingInfo.clearAssociationHistory()
             resetToIdleState()

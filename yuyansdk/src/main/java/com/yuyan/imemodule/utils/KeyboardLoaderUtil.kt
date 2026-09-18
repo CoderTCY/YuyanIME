@@ -273,11 +273,7 @@ class KeyboardLoaderUtil private constructor() {
                 rows.add(keyBeans)
             }
         }
-        val numberLineSkb = when(skbStyleMode){
-            SkbStyleMode.Yuyan -> numberLine
-            SkbStyleMode.Samsung -> numberLine
-            SkbStyleMode.Google -> numberLine
-        }
+        val numberLineSkb = numberLine && skbValue != InputModeSwitcher.MASK_SKB_LAYOUT_NUMBER
         softKeyboard = getSoftKeyboard(rows, numberLineSkb)
         mSoftKeyboardMap[skbValue] = softKeyboard
         return softKeyboard
